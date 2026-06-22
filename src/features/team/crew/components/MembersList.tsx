@@ -1,9 +1,13 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { Icon } from '@/components/Icon'
-import type { TeamMember, Role } from '../crew-service'
-import { assignRoleToMember, suspendMember, activateMember } from '../crew-actions'
+import { useState } from "react";
+import { Icon } from "@/components/Icon";
+import type { TeamMember, Role } from "../crew-service";
+import {
+  assignRoleToMember,
+  suspendMember,
+  activateMember,
+} from "../crew-actions";
 
 export function MembersList({
   members,
@@ -11,48 +15,48 @@ export function MembersList({
   organizationId,
   userOrgId,
 }: {
-  members: TeamMember[]
-  roles: Role[]
-  organizationId: string
-  userOrgId: string
+  members: TeamMember[];
+  roles: Role[];
+  organizationId: string;
+  userOrgId: string;
 }) {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const isAdmin = organizationId === userOrgId
+  const isAdmin = organizationId === userOrgId;
 
   async function handleAction(
-    action: 'suspend' | 'activate' | 'assign',
+    action: "suspend" | "activate" | "assign",
     membershipId: string,
     roleId?: string,
   ) {
     if (!isAdmin) {
-      setError('You do not have permission to perform this action')
-      return
+      setError("You do not have permission to perform this action");
+      return;
     }
 
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
 
     try {
-      if (action === 'suspend') {
-        await suspendMember(organizationId, { membershipId })
-      } else if (action === 'activate') {
-        await activateMember(organizationId, { membershipId })
-      } else if (action === 'assign' && roleId) {
-        await assignRoleToMember(organizationId, { membershipId, roleId })
+      if (action === "suspend") {
+        await suspendMember(organizationId, { membershipId });
+      } else if (action === "activate") {
+        await activateMember(organizationId, { membershipId });
+      } else if (action === "assign" && roleId) {
+        await assignRoleToMember(organizationId, { membershipId, roleId });
       }
-      window.location.reload()
+      window.location.reload();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Action failed')
+      setError(cause instanceof Error ? cause.message : "Action failed");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
-  const active = members.filter((m) => m.status === 'active')
-  const invited = members.filter((m) => m.status === 'invited')
-  const suspended = members.filter((m) => m.status === 'suspended')
+  const active = members.filter((m) => m.status === "active");
+  const invited = members.filter((m) => m.status === "invited");
+  const suspended = members.filter((m) => m.status === "suspended");
 
   return (
     <div className="space-y-6">
@@ -97,7 +101,7 @@ export function MembersList({
                       disabled={loading}
                       onChange={(e) => {
                         if (e.target.value) {
-                          handleAction('assign', member.id, e.target.value)
+                          handleAction("assign", member.id, e.target.value);
                         }
                       }}
                       className="rounded-lg border border-[#3a3a36] bg-[#232321] px-3 py-2 text-xs text-white focus:border-victoria focus:outline-none disabled:opacity-50"
@@ -111,7 +115,7 @@ export function MembersList({
                     </select>
                     <button
                       disabled={loading}
-                      onClick={() => handleAction('suspend', member.id)}
+                      onClick={() => handleAction("suspend", member.id)}
                       className="rounded-lg border border-sunset/30 bg-sunset/10 px-3 py-2 text-xs font-semibold text-sunset transition hover:bg-sunset/20 disabled:opacity-50"
                     >
                       Suspend
@@ -152,7 +156,7 @@ export function MembersList({
                 {isAdmin && (
                   <button
                     disabled={loading}
-                    onClick={() => handleAction('activate', member.id)}
+                    onClick={() => handleAction("activate", member.id)}
                     className="rounded-lg border border-savannah/30 bg-savannah/10 px-3 py-2 text-xs font-semibold text-savannah transition hover:bg-savannah/20 disabled:opacity-50"
                   >
                     Activate
@@ -186,7 +190,7 @@ export function MembersList({
                 {isAdmin && (
                   <button
                     disabled={loading}
-                    onClick={() => handleAction('activate', member.id)}
+                    onClick={() => handleAction("activate", member.id)}
                     className="rounded-lg border border-victoria/30 bg-victoria/10 px-3 py-2 text-xs font-semibold text-victoria transition hover:bg-victoria/20 disabled:opacity-50"
                   >
                     Reactivate
@@ -198,5 +202,5 @@ export function MembersList({
         </div>
       )}
     </div>
-  )
+  );
 }
