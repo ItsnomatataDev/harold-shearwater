@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { requireTeamContext } from "@/features/auth/services/auth-context";
-import { getAuditLogs } from "@/features/team/settings/settings-service";
-import { OrgSettings } from "@/features/team/settings/components/OrgSettings";
+import { getAuditLogs, getMembershipRoleNames } from "@/features/team/settings/settings-service";
 import { AuditLogViewer } from "@/features/team/settings/components/AuditLogViewer";
+import { ProfileSettingsForm } from "@/features/team/settings/components/ProfileSettingsForm";
+import { ModuleHeader } from "@/features/team/components/ModuleHeader";
+import { hasOrganizationPermission } from "@/features/auth/services/auth-context";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -15,29 +17,14 @@ export default async function SettingsPage() {
     redirect("/auth/continue");
   }
 
-  const logs = await getAuditLogs(team.membership.organizationId);
+  const canViewAudit = await hasOrganizationPermission(team.membership.organizationId, "audit.view");
+  const [roleNames, logs] = await Promise.all([getMembershipRoleNames(team.membership.id), canViewAudit ? getAuditLogs(team.membership.organizationId) : Promise.resolve([])]);
 
   return (
     <section className="space-y-6">
-      <header className="rounded-3xl border border-[#343431] bg-[#1d1d1b] p-6 sm:p-7">
-        <p className="text-[11px] font-semibold uppercase tracking-[.16em] text-[#888880]">
-          Administration
-        </p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-[-.03em] text-white">
-          Settings
-        </h1>
-        <p className="mt-3 max-w-3xl text-sm leading-6 text-[#9a9a94]">
-          Configure workspace defaults, notification rules, and platform
-          controls with clear administrative boundaries.
-        </p>
-      </header>
-
-      <OrgSettings
-        orgName={team.membership.organizationName}
-        orgSlug={team.membership.organizationSlug}
-      />
-
-      <AuditLogViewer logs={logs} />
+      <ModuleHeader eyebrow="Your account" title="Profile & Settings" description="Keep your staff profile accurate and review the organization, location, department, and role attached to your access." />
+      <ProfileSettingsForm profile={{ firstName: team.context.firstName, lastName: team.context.lastName, email: team.context.email, phone: team.context.phone, jobTitle: team.context.jobTitle, timezone: team.context.timezone, avatarUrl: team.context.avatarUrl }} organization={team.membership.organizationName ?? "Shearwater Victoria Falls"} membership={{ department: team.membership.departmentName ?? "Not assigned", location: team.membership.primaryLocationName ?? "Not assigned", employeeNumber: team.membership.employeeNumber }} roleNames={roleNames}/>
+      {canViewAudit && <div className="space-y-3"><p className="text-xs font-semibold uppercase tracking-[.14em] text-gold">Administrator audit</p><AuditLogViewer logs={logs}/></div>}
     </section>
   );
 }

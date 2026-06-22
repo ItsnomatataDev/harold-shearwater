@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { requireTeamContext } from "@/features/auth/services/auth-context";
+import { hasOrganizationPermission, requireTeamContext } from "@/features/auth/services/auth-context";
 import { getDocuments } from "@/features/team/knowledge/knowledge-service";
 import { DocumentsList } from "@/features/team/knowledge/components/DocumentsList";
 import { CreateDocumentForm } from "@/features/team/knowledge/components/CreateDocumentForm";
+import { ModuleHeader } from "@/features/team/components/ModuleHeader";
 
 export const metadata: Metadata = { title: "Knowledge" };
 
@@ -15,28 +16,19 @@ export default async function KnowledgePage() {
     redirect("/auth/continue");
   }
 
-  const documents = await getDocuments(team.membership.organizationId);
+  const canManage = await hasOrganizationPermission(team.membership.organizationId, "documents.manage");
+  const documents = await getDocuments(team.membership.organizationId, canManage);
 
   return (
     <section className="space-y-6">
-      <header className="rounded-3xl border border-[#343431] bg-[#1d1d1b] p-6 sm:p-7">
-        <p className="text-[11px] font-semibold uppercase tracking-[.16em] text-gold">
-          Operations Knowledge
-        </p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-[-.03em] text-white">
-          Knowledge
-        </h1>
-        <p className="mt-3 max-w-3xl text-sm leading-6 text-[#9a9a94]">
-          Publish policies, SOPs, and operational guidance as the approved
-          source for people and AI assistance.
-        </p>
-      </header>
+      <ModuleHeader eyebrow="Operations Knowledge" title="Knowledge Base" description="Find approved policies, SOPs, and operational guidance—the future source of truth for Harold." />
 
-      <CreateDocumentForm organizationId={team.membership.organizationId} />
+      {canManage && <CreateDocumentForm organizationId={team.membership.organizationId} />}
 
       <DocumentsList
         documents={documents}
         organizationId={team.membership.organizationId}
+        canManage={canManage}
       />
     </section>
   );

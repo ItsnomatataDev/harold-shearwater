@@ -1,4 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { createServerClient } from "@supabase/ssr";
+import type { Database } from "@/types/database";
+import { getSupabaseConfig } from "@/lib/supabase/config";
 
 function hasSupabaseSessionCookie(request: NextRequest) {
   return request.cookies
@@ -7,6 +10,49 @@ function hasSupabaseSessionCookie(request: NextRequest) {
       (cookie) =>
         cookie.name.startsWith("sb-") && cookie.name.includes("auth-token"),
     );
+}
+
+function clearSupabaseAuthCookies(
+  request: NextRequest,
+  response: NextResponse,
+) {
+  for (const cookie of request.cookies.getAll()) {
+    const isSupabaseAuthCookie =
+      cookie.name.startsWith("sb-") &&
+      (cookie.name.includes("auth-token") ||
+        cookie.name.includes("code-verifier"));
+
+    if (isSupabaseAuthCookie) {
+      response.cookies.set(cookie.name, "", {
+        expires: new Date(0),
+        path: "/",
+      });
+    }
+  }
+}
+
+async function resolveAuthState(request: NextRequest, response: NextResponse) {
+  const { url, publishableKey } = getSupabaseConfig();
+
+  const supabase = createServerClient<Database>(url, publishableKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        for (const cookie of cookiesToSet) {
+          response.cookies.set(cookie.name, cookie.value, cookie.options);
+        }
+      },
+    },
+  });
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  return { user, error };
 }
 
 export async function proxy(request: NextRequest) {
@@ -25,17 +71,43 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next({ request });
   }
 
+  const response = NextResponse.next({ request });
+
   if (!hasSession && protectedPath) {
     const loginUrl = new URL("/auth", request.url);
     loginUrl.searchParams.set("next", `${path}${request.nextUrl.search}`);
     return NextResponse.redirect(loginUrl);
   }
 
-  if (hasSession && path === "/auth") {
-    return NextResponse.redirect(new URL("/auth/continue", request.url));
+  if (hasSession) {
+    const { user, error } = await resolveAuthState(request, response);
+
+    if (error || !user) {
+      clearSupabaseAuthCookies(request, response);
+
+      if (protectedPath) {
+        const loginUrl = new URL("/auth", request.url);
+        loginUrl.searchParams.set("next", `${path}${request.nextUrl.search}`);
+        return NextResponse.redirect(loginUrl, {
+          headers: response.headers,
+        });
+      }
+
+      if (path === "/auth") {
+        return response;
+      }
+    }
+
+    if (path === "/auth") {
+      return NextResponse.redirect(new URL("/auth/continue", request.url), {
+        headers: response.headers,
+      });
+    }
+
+    return response;
   }
 
-  return NextResponse.next({ request });
+  return response;
 }
 
 export const config = {

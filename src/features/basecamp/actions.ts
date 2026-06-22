@@ -4,18 +4,19 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireTeamContext } from "@/features/auth/services/auth-context";
 
-export async function setTaskCompleted(taskId: string, completed: boolean) {
+export async function setDutyCompleted(scheduleId: string, completed: boolean) {
   const team = await requireTeamContext();
   if (!team) throw new Error("Team Access is required.");
   const { error } = await (
     await createClient()
   )
-    .from("tasks")
+    .from("schedule_assignments")
     .update({
-      status: completed ? "completed" : "open",
+      status: completed ? "completed" : "assigned",
       completed_at: completed ? new Date().toISOString() : null,
     })
-    .eq("id", taskId);
+    .eq("schedule_id", scheduleId)
+    .eq("membership_id", team.membership.id);
   if (error) throw new Error(error.message);
   revalidatePath("/team/dashboard");
 }

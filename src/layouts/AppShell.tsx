@@ -20,19 +20,19 @@ const baseNavigation: {
   icon: IconName;
   badge?: string;
 }[] = [
-  { label: "Dashboard", href: "/team/dashboard", icon: "insights" },
+  { label: "Basecamp", href: "/team/dashboard", icon: "home" },
   { label: "Attendance", href: "/team/attendance", icon: "insights" },
-  { label: "My Schedules / Duties", href: "/team/schedules", icon: "calendar" },
+  { label: "Duties & Schedules", href: "/team/schedules", icon: "calendar" },
+  { label: "Meetings", href: "/team/meetings", icon: "users" },
   {
     label: "Communication",
     href: "/team/communication",
     icon: "communication",
-    badge: "New",
   },
-  { label: "Knowledge", href: "/team/knowledge", icon: "knowledge" },
+  { label: "Knowledge Base", href: "/team/knowledge", icon: "knowledge" },
   { label: "Harold", href: "/team/harold", icon: "harold" },
-  { label: "Insights", href: "/team/insights", icon: "insights" },
-  { label: "Settings", href: "/team/settings", icon: "settings" },
+  { label: "Reports", href: "/team/insights", icon: "insights" },
+  { label: "Profile & Settings", href: "/team/settings", icon: "settings" },
 ];
 
 function Logo() {

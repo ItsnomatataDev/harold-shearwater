@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Icon } from "@/components/Icon";
 import type { TeamMember, Role } from "../crew-service";
 import {
   assignRoleToMember,
@@ -15,11 +14,13 @@ export function MembersList({
   roles,
   organizationId,
   canManageMembers,
+  canManageRoles,
 }: {
   members: TeamMember[];
   roles: Role[];
   organizationId: string;
   canManageMembers: boolean;
+  canManageRoles: boolean;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -98,7 +99,7 @@ export function MembersList({
                 {canManageMembers && (
                   <div className="ml-4 flex gap-2">
                     <select
-                      disabled={loading}
+                      disabled={loading || !canManageRoles}
                       onChange={(e) => {
                         if (e.target.value) {
                           handleAction("assign", member.id, e.target.value);

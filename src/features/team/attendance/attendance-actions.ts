@@ -1,8 +1,10 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireTeamContext } from "@/features/auth/services/auth-context";
+import { revalidatePath } from "next/cache";
 
-async function getUserAndGuard() {
+async function getUserAndGuard(organizationId: string, membershipId: string) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -12,11 +14,21 @@ async function getUserAndGuard() {
     throw new Error("User not authenticated");
   }
 
-  return { supabase, user };
+  const team = await requireTeamContext();
+  if (
+    !team ||
+    team.context.userId !== user.id ||
+    team.membership.id !== membershipId ||
+    team.membership.organizationId !== organizationId
+  ) {
+    throw new Error("You cannot update this attendance record.");
+  }
+
+  return { supabase, user, team };
 }
 
 export async function clockIn(organizationId: string, membershipId: string) {
-  const { supabase } = await getUserAndGuard();
+  const { supabase, team } = await getUserAndGuard(organizationId, membershipId);
 
   const { data: existing, error: existingError } = await supabase
     .from("attendance_entries")
@@ -33,15 +45,18 @@ export async function clockIn(organizationId: string, membershipId: string) {
   const { error } = await supabase.from("attendance_entries").insert({
     organization_id: organizationId,
     membership_id: membershipId,
+    location_id: team.membership.primaryLocationId,
     clocked_in_at: new Date().toISOString(),
   });
 
   if (error) throw new Error(error.message);
+  revalidatePath("/team/attendance");
+  revalidatePath("/team/dashboard");
   return { success: true };
 }
 
 export async function clockOut(organizationId: string, membershipId: string) {
-  const { supabase } = await getUserAndGuard();
+  const { supabase } = await getUserAndGuard(organizationId, membershipId);
 
   const { data: activeEntry, error: activeError } = await supabase
     .from("attendance_entries")
@@ -62,5 +77,7 @@ export async function clockOut(organizationId: string, membershipId: string) {
     .eq("id", activeEntry.id);
 
   if (error) throw new Error(error.message);
+  revalidatePath("/team/attendance");
+  revalidatePath("/team/dashboard");
   return { success: true };
 }

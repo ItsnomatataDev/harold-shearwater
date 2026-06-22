@@ -3,6 +3,10 @@ import { redirect } from "next/navigation";
 import { requireTeamContext } from "@/features/auth/services/auth-context";
 import { getAttendanceData } from "@/features/team/attendance/attendance-service";
 import { AttendancePanel } from "@/features/team/attendance/components/AttendancePanel";
+import { hasOrganizationPermission } from "@/features/auth/services/auth-context";
+import { getAdminAttendanceRegisterData } from "@/features/admin/attendance/attendance-register-service";
+import { AdminAttendanceRegister } from "@/features/admin/attendance/components/AdminAttendanceRegister";
+import { ModuleHeader } from "@/features/team/components/ModuleHeader";
 
 export const metadata: Metadata = { title: "Attendance" };
 
@@ -14,31 +18,35 @@ export default async function AttendancePage() {
     redirect("/auth/continue");
   }
 
-  const data = await getAttendanceData(
+  const canManage = await hasOrganizationPermission(
     team.membership.organizationId,
-    team.membership.id,
+    "attendance.manage",
   );
+  const [data, register] = await Promise.all([
+    getAttendanceData(team.membership.organizationId, team.membership.id),
+    canManage
+      ? getAdminAttendanceRegisterData(team.membership.organizationId)
+      : Promise.resolve(null),
+  ]);
 
   return (
     <section className="space-y-6">
-      <header className="rounded-3xl border border-[#343431] bg-[#1d1d1b] p-6 sm:p-7">
-        <p className="text-[11px] font-semibold uppercase tracking-[.16em] text-sunset">
-          Team Access
-        </p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-[-.03em] text-white">
-          Attendance
-        </h1>
-        <p className="mt-3 max-w-3xl text-sm leading-6 text-[#9a9a94]">
-          Track clock-in, clock-out, and daily attendance history for your Team
-          Access operations.
-        </p>
-      </header>
+      <ModuleHeader title="Attendance" description="Clock in, review your hours, and—when authorized—monitor today's live staff register." />
 
       <AttendancePanel
         organizationId={team.membership.organizationId}
         membershipId={team.membership.id}
         data={data}
       />
+      {register && (
+        <div className="space-y-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[.14em] text-gold">Manager view</p>
+            <h2 className="mt-2 text-xl font-semibold text-white">Attendance Register</h2>
+          </div>
+          <AdminAttendanceRegister data={register} />
+        </div>
+      )}
     </section>
   );
 }

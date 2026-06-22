@@ -6,11 +6,18 @@ export interface AttendanceEntry {
   id: string;
   clockedInAt: string;
   clockedOutAt: string | null;
+  workedMinutes: number;
 }
 
 export interface AttendanceData {
   activeEntry: AttendanceEntry | null;
   recentEntries: AttendanceEntry[];
+}
+
+function workedMinutes(start: string, end: string | null) {
+  const from = new Date(start).getTime();
+  const to = end ? new Date(end).getTime() : Date.now();
+  return Math.max(0, Math.floor((to - from) / 60_000));
 }
 
 export async function getAttendanceData(
@@ -48,12 +55,14 @@ export async function getAttendanceData(
           id: activeEntry.id,
           clockedInAt: activeEntry.clocked_in_at,
           clockedOutAt: activeEntry.clocked_out_at,
+          workedMinutes: workedMinutes(activeEntry.clocked_in_at, activeEntry.clocked_out_at),
         }
       : null,
     recentEntries: (recentEntries ?? []).map((entry) => ({
       id: entry.id,
       clockedInAt: entry.clocked_in_at,
       clockedOutAt: entry.clocked_out_at,
+      workedMinutes: workedMinutes(entry.clocked_in_at, entry.clocked_out_at),
     })),
   };
 }

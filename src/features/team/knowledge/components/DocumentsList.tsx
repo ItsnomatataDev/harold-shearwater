@@ -1,109 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import type { Document } from "../knowledge-service";
-import { publishDocument, archiveDocument } from "../knowledge-actions";
+import { archiveDocument, publishDocument } from "../knowledge-actions";
 
-export function DocumentsList({
-  documents,
-  organizationId,
-}: {
-  documents: Document[];
-  organizationId: string;
-}) {
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handlePublish(docId: string) {
-    setLoading(true);
-    setError(null);
-
-    try {
-      await publishDocument(organizationId, docId);
-      router.refresh();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Failed to publish");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  const categories = Array.from(new Set(documents.map((d) => d.category)));
-
-  return (
-    <div className="space-y-6">
-      {error && (
-        <div className="rounded-xl border border-sunset/30 bg-sunset/10 px-4 py-3 text-xs text-[#f18a77]">
-          {error}
-        </div>
-      )}
-
-      {categories.map((category) => {
-        const docs = documents.filter((d) => d.category === category);
-        return (
-          <div
-            key={category}
-            className="rounded-2xl border border-[#343431] bg-[#1d1d1b]"
-          >
-            <div className="border-b border-[#343431] px-6 py-4">
-              <h3 className="text-lg font-semibold text-white capitalize">
-                {category}
-              </h3>
-            </div>
-            <div className="divide-y divide-[#343431]">
-              {docs.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="flex items-start justify-between px-6 py-4"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-white">
-                      {doc.title}
-                    </p>
-                    {doc.description && (
-                      <p className="mt-1 text-xs text-[#8a8a84]">
-                        {doc.description}
-                      </p>
-                    )}
-                    <div className="mt-2 flex items-center gap-2">
-                      <span
-                        className={`rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-[.09em] ${
-                          doc.status === "published"
-                            ? "bg-savannah/10 text-savannah"
-                            : "bg-gold/10 text-gold"
-                        }`}
-                      >
-                        {doc.status}
-                      </span>
-                      <span className="text-[10px] text-[#8a8a84]">
-                        by {doc.createdByName || "Unknown"}
-                      </span>
-                    </div>
-                  </div>
-                  {doc.status === "draft" && (
-                    <button
-                      disabled={loading}
-                      onClick={() => handlePublish(doc.id)}
-                      className="ml-4 rounded-lg border border-savannah/30 bg-savannah/10 px-3 py-2 text-xs font-semibold text-savannah transition hover:bg-savannah/20 disabled:opacity-50"
-                    >
-                      Publish
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })}
-
-      {documents.length === 0 && (
-        <div className="rounded-2xl border border-[#343431] bg-[#1d1d1b] px-6 py-12 text-center">
-          <p className="text-sm text-[#8a8a84]">No documents yet</p>
-        </div>
-      )}
-    </div>
-  );
+export function DocumentsList({ documents, organizationId, canManage }: { documents: Document[]; organizationId: string; canManage: boolean }) {
+  const router = useRouter(); const [query, setQuery] = useState(""); const [pending, startTransition] = useTransition(); const [error, setError] = useState<string | null>(null);
+  const visible = documents.filter((document) => `${document.title} ${document.description ?? ""} ${document.category}`.toLowerCase().includes(query.trim().toLowerCase()));
+  const run = (action: () => Promise<unknown>) => startTransition(async () => { try { setError(null); await action(); router.refresh(); } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to update document."); } });
+  return <div className="space-y-5"><div className="relative"><Icon name="search" className="absolute left-3 top-3.5 h-4 w-4 text-[#70706a]"/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search documents, descriptions, or categories" className="input pl-10"/></div>{error && <p className="rounded-xl border border-sunset/30 bg-sunset/10 px-4 py-3 text-xs text-sunset">{error}</p>}<div className="grid gap-4 lg:grid-cols-2">{visible.map((document) => <article key={document.id} className="rounded-2xl border border-[#343431] bg-[#1d1d1b] p-5"><div className="flex items-center justify-between gap-3"><span className="rounded-full bg-victoria/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-victoria">{document.category}</span><span className="text-[9px] font-bold uppercase tracking-wider text-[#7b7b75]">{document.status}</span></div><Link href={`/team/knowledge/${document.id}`} className="mt-4 block text-base font-semibold text-white hover:text-victoria">{document.title}</Link>{document.description && <p className="mt-2 text-xs leading-5 text-[#8b8b85]">{document.description}</p>}<p className="mt-4 text-[10px] text-[#6f6f69]">By {document.createdByName}</p>{canManage && <div className="mt-4 flex gap-2 border-t border-[#30302d] pt-4">{document.status !== "published" && <button disabled={pending} onClick={() => run(() => publishDocument(organizationId, document.id))} className="rounded-lg bg-savannah/10 px-3 py-2 text-[10px] font-semibold text-savannah">Publish</button>}{document.status !== "archived" && <button disabled={pending} onClick={() => run(() => archiveDocument(organizationId, document.id))} className="rounded-lg bg-[#30302d] px-3 py-2 text-[10px] font-semibold text-[#aaa]">Archive</button>}</div>}</article>)}</div>{!visible.length && <div className="rounded-2xl border border-dashed border-[#3b3b38] px-6 py-12 text-center text-xs text-[#777771]">No documents match this search.</div>}</div>;
 }

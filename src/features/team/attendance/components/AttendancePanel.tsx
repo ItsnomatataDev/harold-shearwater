@@ -14,6 +14,12 @@ function formatDateTime(value: string) {
   }).format(new Date(value));
 }
 
+function formatDuration(minutes: number) {
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return hours ? `${hours}h ${rest}m` : `${rest}m`;
+}
+
 export function AttendancePanel({
   organizationId,
   membershipId,
@@ -70,6 +76,11 @@ export function AttendancePanel({
             ? `Clocked in at ${formatDateTime(data.activeEntry.clockedInAt)}`
             : "You are currently clocked out."}
         </p>
+        {data.activeEntry && (
+          <p className="mt-1 text-xs font-medium text-savannah">
+            {formatDuration(data.activeEntry.workedMinutes)} worked so far
+          </p>
+        )}
 
         <div className="mt-4 flex gap-3">
           <button
@@ -105,6 +116,9 @@ export function AttendancePanel({
                   {entry.clockedOutAt
                     ? formatDateTime(entry.clockedOutAt)
                     : "Still active"}
+                </p>
+                <p className="mt-1 text-xs text-[#72726c]">
+                  Duration: {formatDuration(entry.workedMinutes)}
                 </p>
               </div>
             ))

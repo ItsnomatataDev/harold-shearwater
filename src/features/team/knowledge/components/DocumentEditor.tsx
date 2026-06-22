@@ -1,0 +1,13 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import type { Document } from "../knowledge-service";
+import { archiveDocument, publishDocument, updateDocument } from "../knowledge-actions";
+
+export function DocumentEditor({ document, organizationId }: { document: Document; organizationId: string }) {
+  const router = useRouter(); const [editing, setEditing] = useState(false); const [pending, startTransition] = useTransition(); const [error, setError] = useState<string | null>(null);
+  const run = (action: () => Promise<unknown>) => startTransition(async () => { try { setError(null); await action(); router.refresh(); } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to update document."); } });
+  if (editing) return <form className="space-y-4 rounded-2xl border border-[#343431] bg-[#1d1d1b] p-6" onSubmit={(event) => { event.preventDefault(); const form = new FormData(event.currentTarget); run(async () => { await updateDocument(organizationId, document.id, { title: form.get("title"), description: form.get("description"), content: form.get("content"), category: form.get("category") }); setEditing(false); }); }}><input name="title" defaultValue={document.title} required className="input"/><input name="description" defaultValue={document.description ?? ""} className="input"/><input name="category" defaultValue={document.category} required className="input"/><textarea name="content" defaultValue={document.content} required rows={16} className="input"/>{error && <p className="text-xs text-sunset">{error}</p>}<div className="flex gap-2"><button disabled={pending} className="rounded-xl bg-sunset px-4 py-2 text-xs font-semibold text-white">Save changes</button><button type="button" onClick={() => setEditing(false)} className="rounded-xl border border-[#444] px-4 py-2 text-xs text-[#aaa]">Cancel</button></div></form>;
+  return <div className="flex flex-wrap gap-2"><button onClick={() => setEditing(true)} className="rounded-xl border border-[#444] px-4 py-2 text-xs font-semibold text-[#ddd]">Edit</button>{document.status !== "published" && <button disabled={pending} onClick={() => run(() => publishDocument(organizationId, document.id))} className="rounded-xl bg-savannah px-4 py-2 text-xs font-semibold text-[#102018]">Publish</button>}{document.status !== "archived" && <button disabled={pending} onClick={() => run(() => archiveDocument(organizationId, document.id))} className="rounded-xl bg-[#333] px-4 py-2 text-xs font-semibold text-[#ccc]">Archive</button>}{error && <p className="w-full text-xs text-sunset">{error}</p>}</div>;
+}

@@ -2,6 +2,8 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
+import { randomBytes } from "node:crypto";
+import type { Json } from "@/types/database";
 
 const InviteMemberSchema = z.object({
   email: z.string().email(),
@@ -27,7 +29,7 @@ async function logAudit(
   action: string,
   entityType: string,
   entityId: string,
-  metadata: Record<string, any>,
+  metadata: Json,
 ) {
   const {
     data: { user },
@@ -61,20 +63,77 @@ async function requirePermission(
   permission: "members.manage" | "roles.manage",
   deniedMessage: string,
 ) {
-  // Generated Supabase types may not include RPC signatures in early migrations.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any).rpc("has_permission", {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) throw new Error("User not authenticated");
+
+  const { data, error } = await supabase.rpc("has_permission", {
     target_organization_id: organizationId,
     required_permission: permission,
   });
 
-  if (error) throw error;
-  if (!data) throw new Error(deniedMessage);
+  if (!error) {
+    if (!data) throw new Error(deniedMessage);
+    return;
+  }
+
+  const missingPublicRpc = error.message.includes(
+    "Could not find the function public.has_permission",
+  );
+
+  if (!missingPublicRpc) throw error;
+
+  const { data: permissionRow, error: permissionError } = await supabase
+    .from("permissions")
+    .select("id")
+    .eq("key", permission)
+    .maybeSingle();
+
+  if (permissionError) throw permissionError;
+  if (!permissionRow) throw new Error(deniedMessage);
+
+  const { data: memberships, error: membershipsError } = await supabase
+    .from("access_memberships")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("organization_id", organizationId)
+    .eq("access_type", "team")
+    .eq("status", "active");
+
+  if (membershipsError) throw membershipsError;
+
+  const membershipIds = (memberships ?? []).map((membership) => membership.id);
+  if (!membershipIds.length) throw new Error(deniedMessage);
+
+  const { data: membershipRoles, error: membershipRolesError } = await supabase
+    .from("membership_roles")
+    .select("role_id")
+    .in("membership_id", membershipIds);
+
+  if (membershipRolesError) throw membershipRolesError;
+
+  const roleIds = Array.from(
+    new Set((membershipRoles ?? []).map((item) => item.role_id)),
+  );
+  if (!roleIds.length) throw new Error(deniedMessage);
+
+  const { data: rolePermissions, error: rolePermissionsError } = await supabase
+    .from("role_permissions")
+    .select("role_id")
+    .eq("permission_id", permissionRow.id)
+    .in("role_id", roleIds)
+    .limit(1);
+
+  if (rolePermissionsError) throw rolePermissionsError;
+  if (!(rolePermissions ?? []).length) throw new Error(deniedMessage);
 }
 
 export async function inviteTeamMember(
   organizationId: string,
-  input: Record<string, any>,
+  input: unknown,
 ) {
   const parsed = InviteMemberSchema.parse(input);
   const supabase = await createClient();
@@ -91,7 +150,7 @@ export async function inviteTeamMember(
     "You do not have permission to invite team members.",
   );
 
-  const tokenHash = require("crypto").randomBytes(32).toString("hex");
+  const tokenHash = randomBytes(32).toString("hex");
   const expiresAt = new Date(
     Date.now() + 7 * 24 * 60 * 60 * 1000,
   ).toISOString();
@@ -129,7 +188,7 @@ export async function inviteTeamMember(
 
 export async function assignRoleToMember(
   organizationId: string,
-  input: Record<string, any>,
+  input: unknown,
 ) {
   const parsed = AssignRoleSchema.parse(input);
   const supabase = await createClient();
@@ -146,9 +205,7 @@ export async function assignRoleToMember(
     "You do not have permission to assign roles.",
   );
 
-  // Use server-side function for deterministic authorization and upsert behavior.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any).rpc("assign_role_to_member", {
+  const { error } = await supabase.rpc("assign_role_to_member", {
     target_membership_id: parsed.membershipId,
     target_role_id: parsed.roleId,
     target_organization_id: organizationId,
@@ -181,7 +238,7 @@ export async function assignRoleToMember(
 
 export async function suspendMember(
   organizationId: string,
-  input: Record<string, any>,
+  input: unknown,
 ) {
   const parsed = SuspendMemberSchema.parse(input);
   const supabase = await createClient();
@@ -219,7 +276,7 @@ export async function suspendMember(
 
 export async function activateMember(
   organizationId: string,
-  input: Record<string, any>,
+  input: unknown,
 ) {
   const parsed = ActivateMemberSchema.parse(input);
   const supabase = await createClient();

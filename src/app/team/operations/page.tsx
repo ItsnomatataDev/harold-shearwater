@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
-export default function OperationsPage() {
+
+export default function LegacyOperationsPage() {
   redirect("/team/schedules");
 }
