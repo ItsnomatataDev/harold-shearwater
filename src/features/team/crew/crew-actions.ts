@@ -133,14 +133,13 @@ export async function assignRoleToMember(
     throw new Error("You do not have permission to assign roles.");
   }
 
-  const { error } = await supabase.from("membership_roles").upsert(
-    {
-      membership_id: parsed.membershipId,
-      role_id: parsed.roleId,
-      assigned_by: user.id,
-    },
-    { onConflict: "membership_id,role_id" },
-  );
+  // Use server-side function for deterministic authorization and upsert behavior.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any).rpc("assign_role_to_member", {
+    target_membership_id: parsed.membershipId,
+    target_role_id: parsed.roleId,
+    target_organization_id: organizationId,
+  });
 
   if (error) {
     if (error.code === "42501") {
@@ -148,7 +147,9 @@ export async function assignRoleToMember(
         "Role assignment blocked by access policy. Contact an admin to grant roles.manage.",
       );
     }
-    throw error;
+    throw new Error(
+      `Role assignment failed (${error.code ?? "unknown"}): ${error.message}`,
+    );
   }
 
   await logAudit(

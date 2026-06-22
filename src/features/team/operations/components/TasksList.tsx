@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import type { TaskItem } from "../operations-service";
 import { updateTask, deleteTask } from "../operations-actions";
@@ -30,6 +31,7 @@ export function TasksList({
   tasks: TaskItem[];
   organizationId: string;
 }) {
+  const router = useRouter();
   const [filter, setFilter] = useState<"all" | "open" | "completed">("all");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +48,7 @@ export function TasksList({
     setError(null);
     try {
       await updateTask(organizationId, { taskId, status: newStatus });
-      window.location.reload();
+      router.refresh();
     } catch (cause) {
       setError(
         cause instanceof Error ? cause.message : "Failed to update task",

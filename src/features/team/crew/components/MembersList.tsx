@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import type { TeamMember, Role } from "../crew-service";
 import {
@@ -20,6 +21,7 @@ export function MembersList({
   organizationId: string;
   userOrgId: string;
 }) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,7 +48,7 @@ export function MembersList({
       } else if (action === "assign" && roleId) {
         await assignRoleToMember(organizationId, { membershipId, roleId });
       }
-      window.location.reload();
+      router.refresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Action failed");
     } finally {

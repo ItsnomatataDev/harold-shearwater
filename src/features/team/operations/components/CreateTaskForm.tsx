@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { createTask } from "../operations-actions";
 
 export function CreateTaskForm({ organizationId }: { organizationId: string }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -27,7 +29,7 @@ export function CreateTaskForm({ organizationId }: { organizationId: string }) {
       setPriority("medium");
       setTimeout(() => {
         setOpen(false);
-        window.location.reload();
+        router.refresh();
       }, 2000);
     } catch (cause) {
       setError(

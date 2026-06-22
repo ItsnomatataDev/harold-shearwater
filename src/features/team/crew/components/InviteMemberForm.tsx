@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import type { Role } from "../crew-service";
 import { inviteTeamMember } from "../crew-actions";
@@ -12,6 +13,7 @@ export function InviteMemberForm({
   roles: Role[];
   organizationId: string;
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [roleId, setRoleId] = useState("");
@@ -32,7 +34,7 @@ export function InviteMemberForm({
       setRoleId("");
       setTimeout(() => {
         setOpen(false);
-        window.location.reload();
+        router.refresh();
       }, 2000);
     } catch (cause) {
       setError(

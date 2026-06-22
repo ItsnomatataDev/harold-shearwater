@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import type { Document } from "../knowledge-service";
 import { publishDocument, archiveDocument } from "../knowledge-actions";
@@ -12,6 +13,7 @@ export function DocumentsList({
   documents: Document[];
   organizationId: string;
 }) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,7 +23,7 @@ export function DocumentsList({
 
     try {
       await publishDocument(organizationId, docId);
-      window.location.reload();
+      router.refresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Failed to publish");
     } finally {
