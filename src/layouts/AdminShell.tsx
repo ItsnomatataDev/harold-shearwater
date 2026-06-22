@@ -22,9 +22,7 @@ const adminNavigation: Array<{
   { label: "Dashboard", href: "/admin/dashboard", icon: "insights" },
   { label: "Attendance Register", href: "/admin/attendance", icon: "clock" },
   { label: "Staff Management", href: "/admin/staff", icon: "crew" },
-  { label: "Roles & Permissions", href: "/admin/roles", icon: "shield" },
-  { label: "Audit Logs", href: "/admin/audit-logs", icon: "file" },
-  { label: "Settings", href: "/admin/settings", icon: "settings" },
+  { label: "Organization", href: "/admin/organization", icon: "route" },
 ];
 
 function AdminLogo() {

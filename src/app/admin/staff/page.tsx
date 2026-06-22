@@ -16,7 +16,7 @@ export default async function AdminStaffPage() {
   if (!admin || !admin.membership.organizationId) redirect("/access-pending");
 
   const { organizationId, id: membershipId } = admin.membership;
-  const { members, roles } = await getCrewData(organizationId);
+  const { members, roles, pendingInvitations, options } = await getCrewData(organizationId);
 
   const isTeamAdmin = await hasTeamAdminAccess(membershipId);
   const [canManageMembersPermission, canManageRolesPermission] =
@@ -47,6 +47,7 @@ export default async function AdminStaffPage() {
         roles={roles}
         organizationId={organizationId}
         canManageMembers={canManageMembers}
+        pendingInvitations={pendingInvitations}
       />
 
       <MembersList
@@ -55,6 +56,7 @@ export default async function AdminStaffPage() {
         organizationId={organizationId}
         canManageMembers={canManageMembers}
         canManageRoles={canManageRoles}
+        options={options}
       />
     </section>
   );

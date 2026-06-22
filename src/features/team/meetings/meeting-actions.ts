@@ -24,6 +24,7 @@ export async function createMeeting(organizationId: string, input: unknown) {
   if (attendeeResult.error) throw new Error(attendeeResult.error.message);
   revalidatePath("/team/meetings");
   revalidatePath("/team/dashboard");
+  revalidatePath("/team/calendar");
 }
 
 export async function respondToMeeting(meetingId: string, response: "accepted" | "declined" | "tentative") {
@@ -33,4 +34,5 @@ export async function respondToMeeting(meetingId: string, response: "accepted" |
   if (error) throw new Error(error.message);
   revalidatePath("/team/meetings");
   revalidatePath("/team/dashboard");
+  revalidatePath("/team/calendar");
 }

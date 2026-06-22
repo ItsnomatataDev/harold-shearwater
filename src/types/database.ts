@@ -48,6 +48,7 @@ export type Database = {
           id: string
           invited_by: string | null
           joined_at: string | null
+          manager_membership_id: string | null
           organization_id: string | null
           primary_location_id: string | null
           status: Database["public"]["Enums"]["membership_status"]
@@ -62,6 +63,7 @@ export type Database = {
           id?: string
           invited_by?: string | null
           joined_at?: string | null
+          manager_membership_id?: string | null
           organization_id?: string | null
           primary_location_id?: string | null
           status?: Database["public"]["Enums"]["membership_status"]
@@ -76,6 +78,7 @@ export type Database = {
           id?: string
           invited_by?: string | null
           joined_at?: string | null
+          manager_membership_id?: string | null
           organization_id?: string | null
           primary_location_id?: string | null
           status?: Database["public"]["Enums"]["membership_status"]
@@ -88,6 +91,13 @@ export type Database = {
             columns: ["department_id"]
             isOneToOne: false
             referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "access_memberships_manager_membership_id_fkey"
+            columns: ["manager_membership_id"]
+            isOneToOne: false
+            referencedRelation: "access_memberships"
             referencedColumns: ["id"]
           },
           {
@@ -1187,6 +1197,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_team_invitation: { Args: { raw_token: string }; Returns: string }
       assign_role_to_member: {
         Args: {
           target_membership_id: string

@@ -23,6 +23,7 @@ const baseNavigation: {
   { label: "Basecamp", href: "/team/dashboard", icon: "home" },
   { label: "Attendance", href: "/team/attendance", icon: "insights" },
   { label: "Duties & Schedules", href: "/team/schedules", icon: "calendar" },
+  { label: "Calendar", href: "/team/calendar", icon: "calendar" },
   { label: "Meetings", href: "/team/meetings", icon: "users" },
   {
     label: "Communication",

@@ -3,17 +3,19 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
-import type { Role } from "../crew-service";
-import { inviteTeamMember } from "../crew-actions";
+import type { PendingInvitation, Role } from "../crew-service";
+import { inviteTeamMember, revokeTeamInvitation } from "../crew-actions";
 
 export function InviteMemberForm({
   roles,
   organizationId,
   canManageMembers,
+  pendingInvitations,
 }: {
   roles: Role[];
   organizationId: string;
   canManageMembers: boolean;
+  pendingInvitations: PendingInvitation[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -22,6 +24,7 @@ export function InviteMemberForm({
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [acceptanceUrl, setAcceptanceUrl] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -30,14 +33,12 @@ export function InviteMemberForm({
     setMessage(null);
 
     try {
-      await inviteTeamMember(organizationId, { email, roleId });
-      setMessage(`Invitation sent to ${email}`);
+      const result = await inviteTeamMember(organizationId, { email, roleId });
+      setMessage(result.deliveryMessage);
+      setAcceptanceUrl(result.acceptanceUrl);
       setEmail("");
       setRoleId("");
-      setTimeout(() => {
-        setOpen(false);
-        router.refresh();
-      }, 2000);
+      router.refresh();
     } catch (cause) {
       setError(
         cause instanceof Error ? cause.message : "Failed to send invitation",
@@ -48,6 +49,7 @@ export function InviteMemberForm({
   }
 
   return (
+    <div className="space-y-5">
     <div className="rounded-2xl border border-[#343431] bg-[#1d1d1b] p-6">
       {!canManageMembers ? (
         <div className="rounded-xl border border-[#343431] bg-[#232321] px-4 py-3 text-xs text-[#8a8a84]">
@@ -104,6 +106,7 @@ export function InviteMemberForm({
               {message}
             </div>
           )}
+          {acceptanceUrl && <div className="rounded-xl border border-victoria/30 bg-victoria/5 p-3"><p className="text-[10px] font-semibold uppercase tracking-wider text-victoria">Secure acceptance link</p><p className="mt-2 text-[10px] leading-5 text-[#8db7c6]">The invited person must open this while signed in with the invited email. New users should normally use the Supabase invitation email first.</p><p className="mt-2 break-all text-[10px] leading-5 text-[#9bc9da]">{acceptanceUrl}</p><button type="button" onClick={() => navigator.clipboard.writeText(acceptanceUrl)} className="mt-2 rounded-lg border border-victoria/30 px-3 py-1.5 text-[10px] font-semibold text-victoria">Copy link</button></div>}
           <div className="flex gap-2">
             <button
               type="submit"
@@ -122,6 +125,8 @@ export function InviteMemberForm({
           </div>
         </form>
       )}
+    </div>
+    {pendingInvitations.length > 0 && <div className="overflow-hidden rounded-2xl border border-[#343431] bg-[#1d1d1b]"><div className="border-b border-[#343431] px-5 py-4"><h2 className="text-base font-semibold text-white">Pending invitations ({pendingInvitations.length})</h2></div><div className="divide-y divide-[#30302d]">{pendingInvitations.map((invitation) => <div key={invitation.id} className="flex flex-col justify-between gap-3 px-5 py-4 sm:flex-row sm:items-center"><div><p className="text-sm font-semibold text-[#e1e1db]">{invitation.email}</p><p className="mt-1 text-xs text-[#777]">{invitation.roleName} · expires {new Date(invitation.expiresAt).toLocaleDateString()}</p></div>{canManageMembers && <button disabled={loading} onClick={async () => { setLoading(true); try { await revokeTeamInvitation(organizationId, { invitationId: invitation.id }); router.refresh(); } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to revoke invitation."); } finally { setLoading(false); } }} className="rounded-lg border border-sunset/30 px-3 py-2 text-xs font-semibold text-sunset">Revoke</button>}</div>)}</div></div>}
     </div>
   );
 }

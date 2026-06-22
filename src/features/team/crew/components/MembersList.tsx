@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { TeamMember, Role } from "../crew-service";
+import type { CrewOptions, TeamMember, Role } from "../crew-service";
 import {
   assignRoleToMember,
   suspendMember,
   activateMember,
+  updateStaffAssignment,
 } from "../crew-actions";
 
 export function MembersList({
@@ -15,16 +16,19 @@ export function MembersList({
   organizationId,
   canManageMembers,
   canManageRoles,
+  options,
 }: {
   members: TeamMember[];
   roles: Role[];
   organizationId: string;
   canManageMembers: boolean;
   canManageRoles: boolean;
+  options: CrewOptions;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   async function handleAction(
     action: "suspend" | "activate" | "assign",
@@ -58,6 +62,7 @@ export function MembersList({
   const active = members.filter((m) => m.status === "active");
   const invited = members.filter((m) => m.status === "invited");
   const suspended = members.filter((m) => m.status === "suspended");
+  const editingMember = members.find((member) => member.id === editingId) ?? null;
 
   return (
     <div className="space-y-6">
@@ -66,6 +71,7 @@ export function MembersList({
           {error}
         </div>
       )}
+      {editingMember && <StaffAssignmentEditor member={editingMember} members={active} options={options} loading={loading} cancel={() => setEditingId(null)} save={async (input) => { setLoading(true); setError(null); try { await updateStaffAssignment(organizationId, input); setEditingId(null); router.refresh(); } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to update staff assignment."); } finally { setLoading(false); } }}/>} 
 
       <div className="rounded-2xl border border-[#343431] bg-[#1d1d1b]">
         <div className="border-b border-[#343431] px-6 py-4">
@@ -85,6 +91,7 @@ export function MembersList({
                     {member.fullName}
                   </p>
                   <p className="mt-1 text-xs text-[#8a8a84]">{member.email}</p>
+                  <p className="mt-1 text-[10px] text-[#6f6f69]">{member.jobTitle} · {member.departmentName} · {member.locationName}</p>
                   <div className="mt-2 flex flex-wrap gap-1">
                     {member.roles.map((role) => (
                       <span
@@ -98,6 +105,7 @@ export function MembersList({
                 </div>
                 {canManageMembers && (
                   <div className="ml-4 flex gap-2">
+                    <button disabled={loading} onClick={() => setEditingId(member.id)} className="rounded-lg border border-victoria/30 bg-victoria/10 px-3 py-2 text-xs font-semibold text-victoria">Edit assignment</button>
                     <select
                       disabled={loading || !canManageRoles}
                       onChange={(e) => {
@@ -137,7 +145,7 @@ export function MembersList({
         <div className="rounded-2xl border border-[#343431] bg-[#1d1d1b]">
           <div className="border-b border-[#343431] px-6 py-4">
             <h3 className="text-lg font-semibold text-white">
-              Pending Invitations ({invited.length})
+              Memberships awaiting activation ({invited.length})
             </h3>
           </div>
           <div className="divide-y divide-[#343431]">
@@ -151,7 +159,7 @@ export function MembersList({
                     {member.email}
                   </p>
                   <p className="mt-1 text-xs text-[#8a8a84]">
-                    Invited {new Date(member.invitedBy!).toLocaleDateString()}
+                    Access is not active yet
                   </p>
                 </div>
                 {canManageMembers && (
@@ -205,3 +213,9 @@ export function MembersList({
     </div>
   );
 }
+
+function StaffAssignmentEditor({ member, members, options, loading, cancel, save }: { member: TeamMember; members: TeamMember[]; options: CrewOptions; loading: boolean; cancel: () => void; save: (input: unknown) => Promise<void> }) {
+  return <form className="grid gap-4 rounded-2xl border border-victoria/30 bg-[#1d1d1b] p-5 sm:grid-cols-2" onSubmit={(event) => { event.preventDefault(); const form = new FormData(event.currentTarget); void save({ membershipId: member.id, departmentId: form.get("departmentId") || null, locationId: form.get("locationId") || null, managerMembershipId: form.get("managerMembershipId") || null, employeeNumber: form.get("employeeNumber") || null, jobTitle: form.get("jobTitle") || null, teamIds: form.getAll("teamIds") }); }}><div className="sm:col-span-2"><p className="text-xs font-semibold uppercase tracking-wider text-victoria">Staff assignment</p><h3 className="mt-2 text-lg font-semibold text-white">{member.fullName}</h3></div><Field label="Job title"><input name="jobTitle" defaultValue={member.jobTitle} className="input"/></Field><Field label="Employee number"><input name="employeeNumber" defaultValue={member.employeeNumber ?? ""} className="input"/></Field><Field label="Department"><select name="departmentId" defaultValue={member.departmentId ?? ""} className="input"><option value="">Unassigned</option>{options.departments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field><Field label="Primary location"><select name="locationId" defaultValue={member.locationId ?? ""} className="input"><option value="">Unassigned</option>{options.locations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field><Field label="Reports to"><select name="managerMembershipId" defaultValue={member.managerMembershipId ?? ""} className="input"><option value="">Unassigned</option>{members.filter((item) => item.id !== member.id).map((item) => <option key={item.id} value={item.id}>{item.fullName}</option>)}</select></Field><Field label="Teams"><select name="teamIds" multiple defaultValue={member.teamIds} className="input min-h-28">{options.teams.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field><div className="flex gap-2 sm:col-span-2"><button disabled={loading} className="rounded-xl bg-sunset px-4 py-2.5 text-xs font-semibold text-white">{loading ? "Saving…" : "Save assignment"}</button><button type="button" onClick={cancel} className="rounded-xl border border-[#444] px-4 py-2.5 text-xs text-[#aaa]">Cancel</button></div></form>;
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="space-y-2"><span className="text-[10px] font-semibold uppercase tracking-wider text-[#85857f]">{label}</span>{children}</label>; }

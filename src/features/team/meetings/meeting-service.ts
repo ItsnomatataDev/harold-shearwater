@@ -11,6 +11,8 @@ export interface MeetingView {
   location: string;
   attendees: Array<{ userId: string; name: string; email: string; response: "needs_action" | "accepted" | "declined" | "tentative" }>;
   myResponse: "needs_action" | "accepted" | "declined" | "tentative" | null;
+  organizerName: string;
+  isOrganizer: boolean;
 }
 
 export async function getMeetingsData(organizationId: string, userId: string, canManage: boolean) {
@@ -19,12 +21,12 @@ export async function getMeetingsData(organizationId: string, userId: string, ca
   from.setHours(0, 0, 0, 0);
   const to = new Date();
   to.setDate(to.getDate() + 90);
-  const { data: meetings, error } = await supabase.from("meetings").select("id,title,description,starts_at,ends_at,location").eq("organization_id", organizationId).gte("starts_at", from.toISOString()).lt("starts_at", to.toISOString()).order("starts_at");
+  const { data: meetings, error } = await supabase.from("meetings").select("id,title,description,starts_at,ends_at,location,created_by").eq("organization_id", organizationId).gte("starts_at", from.toISOString()).lt("starts_at", to.toISOString()).order("starts_at");
   if (error) throw new Error(error.message);
   const ids = (meetings ?? []).map((row) => row.id);
   const attendeeResult = ids.length ? await supabase.from("meeting_attendees").select("meeting_id,user_id,response").in("meeting_id", ids) : { data: [], error: null };
   if (attendeeResult.error) throw new Error(attendeeResult.error.message);
-  const userIds = Array.from(new Set((attendeeResult.data ?? []).map((row) => row.user_id)));
+  const userIds = Array.from(new Set([...(attendeeResult.data ?? []).map((row) => row.user_id), ...(meetings ?? []).map((row) => row.created_by)]));
   const profileResult = userIds.length ? await supabase.from("profiles").select("id,first_name,last_name,email").in("id", userIds) : { data: [], error: null };
   if (profileResult.error) throw new Error(profileResult.error.message);
   const profiles = new Map((profileResult.data ?? []).map((profile) => [profile.id, profile]));
@@ -44,7 +46,8 @@ export async function getMeetingsData(organizationId: string, userId: string, ca
       const profile = profiles.get(row.user_id);
       return { userId: row.user_id, name: `${profile?.first_name ?? ""} ${profile?.last_name ?? ""}`.trim() || profile?.email || "Team member", email: profile?.email ?? "", response: row.response as MeetingView["attendees"][number]["response"] };
     });
-    return { id: meeting.id, title: meeting.title, description: meeting.description, startsAt: meeting.starts_at, endsAt: meeting.ends_at, location: meeting.location ?? "To be confirmed", attendees, myResponse: attendees.find((person) => person.userId === userId)?.response ?? null };
+    const organizer = profiles.get(meeting.created_by);
+    return { id: meeting.id, title: meeting.title, description: meeting.description, startsAt: meeting.starts_at, endsAt: meeting.ends_at, location: meeting.location ?? "To be confirmed", attendees, myResponse: attendees.find((person) => person.userId === userId)?.response ?? null, organizerName: `${organizer?.first_name ?? ""} ${organizer?.last_name ?? ""}`.trim() || organizer?.email || "Shearwater Team", isOrganizer: meeting.created_by === userId };
   });
   return { meetings: records, staff };
 }

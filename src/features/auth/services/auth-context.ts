@@ -247,7 +247,7 @@ export async function hasAdminPortalAccess() {
   const isTeamAdmin = await hasTeamAdminAccess(team.membership.id);
   if (isTeamAdmin) return true;
 
-  const [canManageMembers, canManageRoles, canViewAudit, canManageAttendance] =
+  const [canManageMembers, canManageRoles, canViewAudit, canManageAttendance, canManageOrganization] =
     await Promise.all([
       hasOrganizationPermission(
         team.membership.organizationId,
@@ -259,10 +259,11 @@ export async function hasAdminPortalAccess() {
         team.membership.organizationId,
         "attendance.manage",
       ),
+      hasOrganizationPermission(team.membership.organizationId, "organization.manage"),
     ]);
 
   return (
-    canManageMembers || canManageRoles || canViewAudit || canManageAttendance
+    canManageMembers || canManageRoles || canViewAudit || canManageAttendance || canManageOrganization
   );
 }
 
