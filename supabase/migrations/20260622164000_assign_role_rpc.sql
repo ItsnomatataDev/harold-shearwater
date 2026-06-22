@@ -1,5 +1,4 @@
--- Centralized role assignment endpoint with explicit permission checks.
--- This avoids brittle client-side upsert permission failures.
+
 
 drop function if exists public.assign_role_to_member(uuid, uuid, uuid);
 

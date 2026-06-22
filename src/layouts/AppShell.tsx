@@ -13,14 +13,14 @@ export interface ShellUser {
   organization: string;
 }
 
-const navigation: {
+const baseNavigation: {
   label: string;
   href: string;
   icon: IconName;
   badge?: string;
 }[] = [
   { label: "Basecamp", href: "/team/basecamp", icon: "home" },
-  { label: "Crew", href: "/team/crew", icon: "crew" },
+  { label: "Attendance", href: "/team/attendance", icon: "insights" },
   { label: "Operations", href: "/team/operations", icon: "operations" },
   {
     label: "Communication",
@@ -65,6 +65,7 @@ export function AppShell({
   const pathname = usePathname();
   const currentPath = pathname ?? "";
   const [open, setOpen] = useState(false);
+  const navigation = baseNavigation;
 
   const isActive = (href: string) =>
     currentPath === href || currentPath.startsWith(`${href}/`);

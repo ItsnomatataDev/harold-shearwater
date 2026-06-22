@@ -10,6 +10,7 @@ export default async function TeamLayout({
 }) {
   const team = await requireAccessContext("team");
   if (!team) redirect("/auth/continue");
+
   return (
     <AppShell
       user={{

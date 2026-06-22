@@ -14,25 +14,23 @@ export function MembersList({
   members,
   roles,
   organizationId,
-  userOrgId,
+  canManageMembers,
 }: {
   members: TeamMember[];
   roles: Role[];
   organizationId: string;
-  userOrgId: string;
+  canManageMembers: boolean;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const isAdmin = organizationId === userOrgId;
 
   async function handleAction(
     action: "suspend" | "activate" | "assign",
     membershipId: string,
     roleId?: string,
   ) {
-    if (!isAdmin) {
+    if (!canManageMembers) {
       setError("You do not have permission to perform this action");
       return;
     }
@@ -97,7 +95,7 @@ export function MembersList({
                     ))}
                   </div>
                 </div>
-                {isAdmin && (
+                {canManageMembers && (
                   <div className="ml-4 flex gap-2">
                     <select
                       disabled={loading}
@@ -155,7 +153,7 @@ export function MembersList({
                     Invited {new Date(member.invitedBy!).toLocaleDateString()}
                   </p>
                 </div>
-                {isAdmin && (
+                {canManageMembers && (
                   <button
                     disabled={loading}
                     onClick={() => handleAction("activate", member.id)}
@@ -189,7 +187,7 @@ export function MembersList({
                   </p>
                   <p className="mt-1 text-xs text-[#8a8a84]">{member.email}</p>
                 </div>
-                {isAdmin && (
+                {canManageMembers && (
                   <button
                     disabled={loading}
                     onClick={() => handleAction("activate", member.id)}

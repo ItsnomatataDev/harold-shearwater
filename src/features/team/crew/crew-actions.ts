@@ -1,7 +1,6 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
 const InviteMemberSchema = z.object({
@@ -56,6 +55,23 @@ async function logAudit(
   }
 }
 
+async function requirePermission(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  organizationId: string,
+  permission: "members.manage" | "roles.manage",
+  deniedMessage: string,
+) {
+  // Generated Supabase types may not include RPC signatures in early migrations.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any).rpc("has_permission", {
+    target_organization_id: organizationId,
+    required_permission: permission,
+  });
+
+  if (error) throw error;
+  if (!data) throw new Error(deniedMessage);
+}
+
 export async function inviteTeamMember(
   organizationId: string,
   input: Record<string, any>,
@@ -68,8 +84,12 @@ export async function inviteTeamMember(
   } = await supabase.auth.getUser();
   if (!user) throw new Error("User not authenticated");
 
-  // TODO: Implement permission check via membership_roles
-  // For now, allow team members to invite (simplified)
+  await requirePermission(
+    supabase,
+    organizationId,
+    "members.manage",
+    "You do not have permission to invite team members.",
+  );
 
   const tokenHash = require("crypto").randomBytes(32).toString("hex");
   const expiresAt = new Date(
@@ -119,19 +139,12 @@ export async function assignRoleToMember(
   } = await supabase.auth.getUser();
   if (!user) throw new Error("User not authenticated");
 
-  // Generated Supabase types may not include RPC signatures in early migrations.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: canManageRoles, error: permissionError } = await (
-    supabase as any
-  ).rpc("has_permission", {
-    target_organization_id: organizationId,
-    required_permission: "roles.manage",
-  });
-
-  if (permissionError) throw permissionError;
-  if (!canManageRoles) {
-    throw new Error("You do not have permission to assign roles.");
-  }
+  await requirePermission(
+    supabase,
+    organizationId,
+    "roles.manage",
+    "You do not have permission to assign roles.",
+  );
 
   // Use server-side function for deterministic authorization and upsert behavior.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -178,8 +191,12 @@ export async function suspendMember(
   } = await supabase.auth.getUser();
   if (!user) throw new Error("User not authenticated");
 
-  // TODO: Implement permission check via membership_roles
-  // For now, allow team members to suspend (simplified)
+  await requirePermission(
+    supabase,
+    organizationId,
+    "members.manage",
+    "You do not have permission to suspend members.",
+  );
 
   const { error } = await supabase
     .from("access_memberships")
@@ -212,8 +229,12 @@ export async function activateMember(
   } = await supabase.auth.getUser();
   if (!user) throw new Error("User not authenticated");
 
-  // TODO: Implement permission check via membership_roles
-  // For now, allow team members to activate (simplified)
+  await requirePermission(
+    supabase,
+    organizationId,
+    "members.manage",
+    "You do not have permission to activate members.",
+  );
 
   const { error } = await supabase
     .from("access_memberships")

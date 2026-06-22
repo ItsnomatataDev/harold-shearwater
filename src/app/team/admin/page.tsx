@@ -1,4 +1,4 @@
 import { redirect } from "next/navigation";
-export default function CrewPage() {
+export default function TeamAdminPage() {
   redirect("/admin/team-access");
 }

@@ -9,9 +9,11 @@ import { inviteTeamMember } from "../crew-actions";
 export function InviteMemberForm({
   roles,
   organizationId,
+  canManageMembers,
 }: {
   roles: Role[];
   organizationId: string;
+  canManageMembers: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -47,7 +49,11 @@ export function InviteMemberForm({
 
   return (
     <div className="rounded-2xl border border-[#343431] bg-[#1d1d1b] p-6">
-      {!open ? (
+      {!canManageMembers ? (
+        <div className="rounded-xl border border-[#343431] bg-[#232321] px-4 py-3 text-xs text-[#8a8a84]">
+          Only admins can invite team members.
+        </div>
+      ) : !open ? (
         <button
           onClick={() => setOpen(true)}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-sunset px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#f0674e]"

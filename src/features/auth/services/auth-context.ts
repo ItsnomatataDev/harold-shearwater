@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 
@@ -31,7 +32,7 @@ export function getAccessHomePath(accessType: AccessType) {
   return "/customer";
 }
 
-export async function getAuthContext(): Promise<AuthContext | null> {
+const getAuthContextCached = cache(async (): Promise<AuthContext | null> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -86,6 +87,10 @@ export async function getAuthContext(): Promise<AuthContext | null> {
       primaryLocationId: membership.primary_location_id,
     })),
   };
+});
+
+export async function getAuthContext(): Promise<AuthContext | null> {
+  return getAuthContextCached();
 }
 
 export async function requireTeamContext() {
@@ -104,4 +109,30 @@ export async function requireAccessContext(accessType: AccessType) {
     (item) => item.accessType === accessType,
   );
   return membership ? { context, membership } : null;
+}
+
+export async function hasTeamAdminAccess(membershipId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("membership_roles")
+    .select("role_id,roles!inner(key)")
+    .eq("membership_id", membershipId)
+    .eq("roles.key", "team_admin")
+    .limit(1);
+
+  if (error) {
+    throw new Error(`Unable to verify admin access: ${error.message}`);
+  }
+
+  return (data ?? []).length > 0;
+}
+
+export async function requireTeamAdminContext() {
+  const team = await requireTeamContext();
+  if (!team) return null;
+
+  const canAccess = await hasTeamAdminAccess(team.membership.id);
+  if (!canAccess) return null;
+
+  return team;
 }
