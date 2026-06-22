@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+@theme {
+  --color-charcoal: #111111;
+  --color-ivory: #f8f8f5;
+  --color-sunset: #e95a41;
+  --color-gold: #e7b347;
+  --color-victoria: #1698c8;
+  --color-savannah: #58b88d;
+  --color-earth: #b87445;
+  --font-sans: "Inter", "Avenir Next", "Segoe UI", sans-serif;
+}
+
+:root { color: #e9e9e4; background: #111; font-family: var(--font-sans); font-synthesis: none; }
+* { box-sizing: border-box; }
+html { background: #111; }
+body { margin: 0; min-width: 320px; min-height: 100vh; background: #111; }
+button, input { font: inherit; }
+button { cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 2px solid #1698c8; outline-offset: 2px; }
+::selection { background: rgba(22,152,200,.35); }
+.app-bg { background: radial-gradient(circle at 82% 0%, rgba(22,152,200,.08), transparent 28rem), radial-gradient(circle at 55% 100%, rgba(231,179,71,.05), transparent 34rem), #111; }
+.card { background: rgba(30,30,29,.88); border: 1px solid #30302e; border-radius: 18px; }
+.soft-card { background: #242422; border: 1px solid #343431; border-radius: 14px; }
+@keyframes slide-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.animate-in { animation: slide-up .45s ease both; }

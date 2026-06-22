@@ -1,0 +1,48 @@
+{
+  "name": "swherold",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "bootstrap:admin": "node --env-file=.env scripts/bootstrap-team-admin.mjs",
+    "bootstrap:team-member": "node --env-file=.env scripts/bootstrap-team-member.mjs"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.12.0",
+    "@supabase/supabase-js": "^2.108.2",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.468.0",
+    "next": "^16.2.9",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "tailwind-merge": "^3.3.0",
+    "tailwindcss": "^4.3.1",
+    "zod": "^4.2.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "@tailwindcss/postcss": "^4.3.1",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.1",
+    "@types/node": "^24.12.3",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "eslint": "9.39.2",
+    "eslint-config-next": "^16.2.9",
+    "jsdom": "^26.1.0",
+    "typescript": "~6.0.2",
+    "vitest": "^4.0.18"
+  },
+  "overrides": {
+    "postcss": "8.5.15"
+  }
+}

@@ -1,0 +1,384 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Shearwater AI Operations Platform - Developer Brief</title>
+<style>
+  @page { size: Letter; margin: 0.75in 0.8in; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #20201f; font-size: 10.5pt; line-height: 1.38; margin: 0 auto; width: 5.7in; }
+  h1 { color: #111111; font-size: 24pt; line-height: 1.08; margin: 0 0 10pt; }
+  h2 { color: #111111; font-size: 16pt; margin: 19pt 0 8pt; border-bottom: 1px solid #deded8; padding-bottom: 5pt; }
+  h3 { color: #111111; font-size: 12.5pt; margin: 14pt 0 5pt; }
+  p { margin: 0 0 8pt; }
+  ul, ol { margin: 6pt 0 11pt 20pt; padding: 0; }
+  li { margin: 0 0 5pt; }
+  table { border-collapse: collapse; width: 5.9in; margin: 8pt 0 14pt; table-layout: fixed; }
+  th { background: #f0f0eb; border: 1px solid #d6d6cf; color: #111; font-size: 9.5pt; text-align: left; padding: 7pt; vertical-align: middle; }
+  td { border: 1px solid #dcdcd6; font-size: 9.5pt; padding: 7pt; vertical-align: top; }
+  .cover { page-break-after: always; padding-top: 0.55in; }
+  .brandline { height: 8pt; background: #E95A41; margin-bottom: 50pt; }
+  .eyebrow { color: #E95A41; font-size: 9pt; font-weight: bold; letter-spacing: 1.6pt; text-transform: uppercase; margin-bottom: 12pt; }
+  .subtitle { color: #62625d; font-size: 13pt; line-height: 1.4; max-width: 470pt; }
+  .metadata { margin-top: 38pt; width: 100%; border-top: 1px solid #d5d5cf; padding-top: 15pt; color: #6b6b65; font-size: 9.5pt; }
+  table.purpose { margin-top: 45pt; background: #f7f7f3; border-left: 4pt solid #1698C8; }
+  table.purpose td { padding: 16pt; border: 0; }
+  .pagebreak { page-break-before: always; }
+  table.callout { background: #f7f7f3; border-left: 4pt solid #E95A41; margin: 10pt 0 14pt; }
+  table.callout td { padding: 11pt 13pt; border: 0; }
+  table.callout-blue { background: #f2f8fa; border-left-color: #1698C8; }
+  table.callout-green { background: #f2f8f5; border-left-color: #58B88D; }
+  .small { color: #6d6d67; font-size: 9.5pt; }
+  .tag { color: #E95A41; font-weight: bold; }
+  table.architecture td { text-align: center; vertical-align: middle; padding: 10pt; }
+  .portal { background: #eaf6ef; font-weight: bold; }
+  .harold { background: #fbede5; font-weight: bold; }
+  .shared { background: #eef6f9; font-weight: bold; }
+  .integration { background: #f3f3ee; color: #5e5e59; }
+  .no-break { page-break-inside: avoid; }
+  .status { color: #177f5c; font-weight: bold; }
+  .footer-note { color: #777770; font-size: 8.5pt; border-top: 1px solid #deded8; padding-top: 6pt; margin-top: 16pt; }
+</style>
+</head>
+<body>
+
+<section class="cover">
+  <div class="brandline"></div>
+  <div class="eyebrow">Shearwater Victoria Falls</div>
+  <h1>AI Operations Platform<br>Developer Brief</h1>
+  <p class="subtitle">A meeting-ready explanation of what we are building, who it serves, how the portals work together, and how the platform should be delivered safely in phases.</p>
+  <table class="purpose"><tr><td><strong>Purpose of this document</strong><br>This brief converts the current product vision into a developer and stakeholder model. It is not a final requirements specification. Its job is to create shared direction and identify the decisions required before implementation.</td></tr></table>
+  <div class="metadata">
+    <strong>Version:</strong> 1.0 &nbsp;&nbsp; | &nbsp;&nbsp; <strong>Date:</strong> 22 June 2026<br>
+    <strong>Status:</strong> Discussion draft for product, operations, commercial and technical alignment<br>
+    <strong>Scope:</strong> Team Access, Agent Access, Customer Access, Harold AI and shared platform services
+  </div>
+</section>
+
+<h2 class="pagebreak">1. Meeting opener: the two-minute explanation</h2>
+<table class="callout callout-blue"><tr><td>
+  <strong>What are we building?</strong><br>
+  We are building Shearwater's digital operating headquarters: one secure platform connecting internal teams, travel agents and customers to the same trusted information, workflows and booking ecosystem. Each group receives a portal designed for its responsibilities. Harold is the shared AI assistant that helps users understand information and complete approved work, while always respecting their permissions.
+</td></tr></table>
+<p>The platform is not three unrelated websites and it is not simply a chatbot. It is one operational system with three controlled experiences:</p>
+<ul>
+  <li><strong>Team Access</strong> helps employees run the company.</li>
+  <li><strong>Agent Access</strong> helps travel partners search, quote, book and manage their customers.</li>
+  <li><strong>Customer Access</strong> helps guests discover, book, manage and communicate about their experience.</li>
+  <li><strong>Harold</strong> assists all three groups using the information and actions each user is allowed to access.</li>
+</ul>
+<p>The first build priority is the shared foundation and Team Access. Agent and Customer Access should only be implemented after identity, permissions, organizational structure and core operational data are reliable.</p>
+
+<h3>What success looks like</h3>
+<ul>
+  <li>One source of truth for users, customers, agents, products, availability, rates and bookings.</li>
+  <li>Fewer manual handovers, duplicated spreadsheets and disconnected conversations.</li>
+  <li>Clear ownership and audit history for operational work.</li>
+  <li>Faster service for agents and guests without exposing internal or confidential information.</li>
+  <li>AI that assists real workflows rather than acting as an isolated novelty.</li>
+</ul>
+
+<h2>2. Platform context</h2>
+<table class="architecture">
+  <tr><td class="portal">TEAM ACCESS<br><span class="small">Internal staff</span></td><td class="portal">AGENT ACCESS<br><span class="small">Travel partners</span></td><td class="portal">CUSTOMER ACCESS<br><span class="small">Guests</span></td></tr>
+  <tr><td colspan="3" class="harold">HAROLD AI<br><span class="small">Answer, draft, recommend, act and hand over</span></td></tr>
+  <tr><td colspan="3" class="shared">SHARED PLATFORM SERVICES<br><span class="small">Identity | CRM | Products | Rates | Availability | Booking | Communication | Work | Knowledge | Audit</span></td></tr>
+  <tr><td colspan="3" class="integration">INTEGRATIONS: Activitar | Email | Website | Future services</td></tr>
+</table>
+<p>All portals use shared platform services. The user interface changes by audience, but the underlying customer, availability, rate and booking records should not be duplicated. Integrations are adapters to external systems; they should not leak directly into every screen.</p>
+
+<h3>Core architectural principle</h3>
+<table class="callout"><tr><td><strong>One platform, many access contexts.</strong> Authentication proves who the person is. Membership determines which organization or customer account they belong to. Roles and permissions determine what they may see or do. Portal selection only changes the experience; it does not replace authorization.</td></tr></table>
+
+<h2>3. People and access model</h2>
+<table>
+  <tr><th style="width:18%">User group</th><th style="width:25%">Identity relationship</th><th style="width:29%">Primary objective</th><th style="width:28%">Access boundary</th></tr>
+  <tr><td><strong>Team member</strong></td><td>Employee or approved contractor belonging to a Shearwater company, department, team and location.</td><td>Operate the business, coordinate people, serve customers and manage partner activity.</td><td>Company data permitted by role, department, location and responsibility.</td></tr>
+  <tr><td><strong>Agent user</strong></td><td>Person belonging to an approved travel agency or partner organization.</td><td>Find products and rates, create enquiries or bookings and manage their clients.</td><td>Only their agency, negotiated rates, clients, quotes, bookings and conversations.</td></tr>
+  <tr><td><strong>Customer</strong></td><td>Individual guest or booker connected to a customer account.</td><td>Discover, book, prepare for and manage an experience.</td><td>Only their profile, party, bookings, documents, payments and conversations.</td></tr>
+  <tr><td><strong>Platform administrator</strong></td><td>Restricted technical or business administrator.</td><td>Manage configuration, access, integrations and incident response.</td><td>Elevated access that is logged, reviewed and protected by MFA.</td></tr>
+</table>
+<p>A person may have more than one access context. For example, a Shearwater employee might also test the customer experience. After one universal login, the system either opens the person's only permitted portal or presents a workspace switcher.</p>
+
+<div class="pagebreak"></div>
+<h2>4. Team Access: the internal digital headquarters</h2>
+<p><span class="tag">Audience:</span> Shearwater employees, managers and approved internal contractors.</p>
+<p><span class="tag">Purpose:</span> Give staff one place to understand the day, coordinate work, manage relationships and act on operational information.</p>
+
+<h3>Navigation and responsibilities</h3>
+<table>
+  <tr><th style="width:19%">Module</th><th style="width:33%">What it contains</th><th style="width:48%">Business outcome</th></tr>
+  <tr><td><strong>Basecamp</strong></td><td>Today's schedule, tasks, meetings, announcements, attendance, quick actions and Ask Harold.</td><td>A role-aware daily starting point that shows what matters now.</td></tr>
+  <tr><td><strong>Crew</strong></td><td>Organizations, departments, teams, employees, profiles, roles, permissions and locations.</td><td>A reliable company directory and ownership model for every later workflow.</td></tr>
+  <tr><td><strong>Operations</strong></td><td>Tasks, duties, customer bookings, agent bookings, incidents and operational status.</td><td>Work moves through visible owners, deadlines and statuses rather than private chats or spreadsheets.</td></tr>
+  <tr><td><strong>Communication</strong></td><td>Internal chat, customer conversations, agent conversations, meetings, announcements and handovers.</td><td>Communication remains connected to customers, bookings and actions.</td></tr>
+  <tr><td><strong>Knowledge</strong></td><td>Policies, SOPs, product fact sheets, media, documents, meeting notes and searchable guidance.</td><td>Staff and Harold use approved, current company knowledge.</td></tr>
+  <tr><td><strong>Harold</strong></td><td>AI chat, summaries, suggestions, drafted responses and approved operational actions.</td><td>Employees spend less time finding information and completing repetitive coordination work.</td></tr>
+  <tr><td><strong>Insights</strong></td><td>Operational, service, attendance, booking and CRM reporting.</td><td>Managers see trends and exceptions without assembling manual reports.</td></tr>
+  <tr><td><strong>Settings</strong></td><td>Company configuration, access rules, integrations, notification preferences and audit views.</td><td>Authorized administrators control how the workspace operates.</td></tr>
+</table>
+
+<h3>Team Access capabilities shown in the current vision</h3>
+<ul>
+  <li>Notifications across operational events.</li>
+  <li>AI-driven CRM and customer profile capture.</li>
+  <li>Personal schedule, duties and meeting schedule.</li>
+  <li>AI meeting notes, summaries and action points.</li>
+  <li>Agent and customer booking visibility.</li>
+  <li>Chat, meetings and live-chat takeover.</li>
+  <li>Staff attendance and presence.</li>
+  <li>Key-account assistance for important agent or customer relationships.</li>
+</ul>
+
+<h3>Example Team Access flow</h3>
+<ol>
+  <li>An Activitar booking or agent enquiry enters the platform.</li>
+  <li>The system links it to the relevant customer, agent and product.</li>
+  <li>Operations receives a notification and any required task is assigned.</li>
+  <li>Harold prepares a short brief using the booking and approved knowledge.</li>
+  <li>A team member reviews the information, performs the next action and leaves an audit trail.</li>
+</ol>
+
+<div class="pagebreak"></div>
+<h2>5. Agent Access: the travel partner workspace</h2>
+<p><span class="tag">Audience:</span> Approved travel agencies, tour operators, resellers and partner users.</p>
+<p><span class="tag">Purpose:</span> Make Shearwater easier to sell by giving partners controlled access to accurate products, availability, contracted rates and booking support.</p>
+
+<h3>Agent portal capabilities</h3>
+<table>
+  <tr><th style="width:26%">Capability</th><th style="width:39%">Expected behavior</th><th style="width:35%">Critical rule</th></tr>
+  <tr><td><strong>Live availability</strong></td><td>Search experiences by date, party size and product, using the authoritative availability source.</td><td>Availability must show source and freshness; stale inventory cannot be presented as confirmed.</td></tr>
+  <tr><td><strong>Layered rate configuration</strong></td><td>Return the correct public, contracted, market or negotiated rate for the agency and booking context.</td><td>Agents must never see another agency's rates or internal margins.</td></tr>
+  <tr><td><strong>Reservations and enquiries</strong></td><td>Create, view and follow up on enquiries, quotes, provisional reservations and confirmed bookings.</td><td>Status definitions and the source of booking truth must be agreed first.</td></tr>
+  <tr><td><strong>Booking management</strong></td><td>Update permitted guest details, view confirmation information and request changes or cancellation.</td><td>High-impact changes may require Shearwater approval.</td></tr>
+  <tr><td><strong>Inbox and documents</strong></td><td>Keep messages, confirmations, vouchers, itineraries and related files with the correct record.</td><td>Documents must follow retention and access policies.</td></tr>
+  <tr><td><strong>Media and fact sheets</strong></td><td>Provide current product descriptions, images, inclusions, restrictions and selling material.</td><td>Only approved, versioned content should be externally visible.</td></tr>
+  <tr><td><strong>Harold for agents</strong></td><td>Help find products, compare options, prepare quotes, answer policy questions and suggest relevant upsells.</td><td>Harold uses the agent's access context and cannot expose internal notes or other agencies.</td></tr>
+</table>
+
+<h3>Agent onboarding</h3>
+<p>Agent registration should not automatically grant commercial access. The recommended flow is application or invitation, agency verification, agreement and rate assignment, user invitation, then activation. Each agency should have its own administrators who can manage approved colleagues within limits.</p>
+
+<h3>Example Agent Access flow</h3>
+<ol>
+  <li>The agent signs in and the platform identifies their agency and applicable contract.</li>
+  <li>The agent searches live availability for a customer's dates.</li>
+  <li>The pricing service returns only eligible rates and conditions.</li>
+  <li>Harold helps compare options or prepare a quote.</li>
+  <li>The agent creates an enquiry, provisional reservation or booking according to agreed rules.</li>
+  <li>Shearwater staff are notified only when review or action is required.</li>
+</ol>
+
+<div class="pagebreak"></div>
+<h2>6. Customer Access: the guest journey</h2>
+<p><span class="tag">Audience:</span> Prospective guests, direct bookers and travelers attached to a booking.</p>
+<p><span class="tag">Purpose:</span> Let customers discover, book, prepare and communicate without exposing internal complexity.</p>
+
+<h3>Customer portal capabilities</h3>
+<table>
+  <tr><th style="width:26%">Capability</th><th style="width:41%">Expected behavior</th><th style="width:33%">Critical rule</th></tr>
+  <tr><td><strong>Website live chat</strong></td><td>Answer product and journey questions, collect contact details with consent and create a qualified enquiry.</td><td>The customer must know when they are speaking to AI and when a human takes over.</td></tr>
+  <tr><td><strong>Live availability</strong></td><td>Show bookable experiences for selected dates and party details.</td><td>Availability and pricing must be authoritative before payment or confirmation.</td></tr>
+  <tr><td><strong>Direct booking</strong></td><td>Create a booking, collect required guest information and provide confirmation if direct sales are approved.</td><td>The business must decide whether the platform or Activitar owns the booking transaction.</td></tr>
+  <tr><td><strong>Imported orders</strong></td><td>Match Activitar orders to customer profiles and display them in the portal.</td><td>Imports must be idempotent so the same booking is never duplicated.</td></tr>
+  <tr><td><strong>Profile and party</strong></td><td>Manage contact information, preferences and required participant details.</td><td>Collect only necessary information and record consent and provenance.</td></tr>
+  <tr><td><strong>Booking management</strong></td><td>View confirmations, documents, preparation information and permitted change requests.</td><td>Customers see only bookings they own or have been explicitly added to.</td></tr>
+  <tr><td><strong>Harold for customers</strong></td><td>Answer approved questions, help select products and assist before and after booking.</td><td>Harold must not invent availability, safety advice, policy or confirmation.</td></tr>
+</table>
+
+<h3>Example Customer Access flow</h3>
+<ol>
+  <li>A visitor asks the website assistant about activities for a selected date.</li>
+  <li>Harold answers from approved product knowledge and checks availability when required.</li>
+  <li>The visitor signs in or provides consented profile information.</li>
+  <li>The system creates an enquiry or direct booking according to the chosen product flow.</li>
+  <li>If confidence is low or the request needs judgment, Harold creates a human handover with conversation context.</li>
+  <li>The customer sees the result in their portal and receives the appropriate notification.</li>
+</ol>
+
+<div class="pagebreak"></div>
+<h2>7. Harold: shared intelligence, controlled execution</h2>
+<p>Harold is a capability layer across the platform, not a separate source of truth. The database and connected operational systems remain authoritative.</p>
+
+<h3>Harold's four operating modes</h3>
+<table>
+  <tr><th style="width:18%">Mode</th><th style="width:39%">Examples</th><th style="width:43%">Control</th></tr>
+  <tr><td><strong>Answer</strong></td><td>Find a policy, explain a product, summarize a booking or answer a rate question.</td><td>Retrieve only approved sources visible to the current user and show source context where useful.</td></tr>
+  <tr><td><strong>Draft</strong></td><td>Prepare an email, quotation explanation, meeting summary or customer response.</td><td>A human reviews before external transmission unless an exact low-risk template is approved.</td></tr>
+  <tr><td><strong>Recommend</strong></td><td>Suggest an upsell, next task, account follow-up or operational priority.</td><td>Clearly label recommendations; do not present them as confirmed decisions.</td></tr>
+  <tr><td><strong>Act</strong></td><td>Create a task, schedule a meeting, update permitted CRM fields or initiate an approved workflow.</td><td>Permission check, confirmation for meaningful changes, idempotency and audit record are mandatory.</td></tr>
+</table>
+
+<h3>Actions Harold should never perform autonomously at first</h3>
+<ul>
+  <li>Confirm unavailable inventory or override the booking source of truth.</li>
+  <li>Change contractual rates, discounts, refunds or cancellation penalties.</li>
+  <li>Send sensitive or high-impact messages without review.</li>
+  <li>Expose internal notes, personal data or information outside the user's membership.</li>
+  <li>Delete business records or conceal audit history.</li>
+  <li>Provide invented safety, medical, legal or payment guidance.</li>
+</ul>
+
+<h3>Human handover contract</h3>
+<p>A handover should include the user, access context, conversation summary, relevant booking or customer, reason for escalation, urgency, suggested next action and full transcript access for the assigned team. Ownership must visibly change from AI to a named human or queue.</p>
+
+<table class="callout callout-green"><tr><td><strong>Design rule:</strong> AI confidence is not authorization. Even when Harold is confident, the user, role, portal and approval policy still determine whether an action is allowed.</td></tr></table>
+
+<div class="pagebreak"></div>
+<h2>8. Shared platform services</h2>
+<table>
+  <tr><th style="width:25%">Service</th><th style="width:40%">Responsibility</th><th style="width:35%">Used by</th></tr>
+  <tr><td><strong>Identity and access</strong></td><td>Login, session, profile, membership, roles, permissions, invitations and MFA.</td><td>All portals and all APIs.</td></tr>
+  <tr><td><strong>Organization directory</strong></td><td>Companies, departments, teams, employees, agent agencies and locations.</td><td>Team Access, Agent Access and administration.</td></tr>
+  <tr><td><strong>Customer and CRM</strong></td><td>Customer identity, relationships, consent, interactions, ownership, tags and account history.</td><td>Team, Agent, Customer and Harold.</td></tr>
+  <tr><td><strong>Product catalog</strong></td><td>Experiences, media, descriptions, inclusions, restrictions and approved fact sheets.</td><td>All portals.</td></tr>
+  <tr><td><strong>Availability</strong></td><td>Read and normalize availability from the agreed authoritative system.</td><td>Agent, Customer, Team and Harold.</td></tr>
+  <tr><td><strong>Pricing and rates</strong></td><td>Public prices, agent contracts, market rules, validity periods and conditions.</td><td>Agent, Customer, Commercial Team and Harold.</td></tr>
+  <tr><td><strong>Booking</strong></td><td>Enquiries, quotes, reservations, confirmations, participants, status and change requests.</td><td>All portals.</td></tr>
+  <tr><td><strong>Communication</strong></td><td>Conversations, channels, participants, messages, handover and linked business records.</td><td>All portals and Harold.</td></tr>
+  <tr><td><strong>Work management</strong></td><td>Tasks, assignments, duties, meetings, notes, actions and attendance.</td><td>Primarily Team Access.</td></tr>
+  <tr><td><strong>Knowledge</strong></td><td>Approved documents, versions, visibility, search indexing and citations.</td><td>Team, Agent, Customer and Harold with different scopes.</td></tr>
+  <tr><td><strong>Notifications</strong></td><td>In-app, email and future channel delivery based on events and preferences.</td><td>All portals.</td></tr>
+  <tr><td><strong>Audit and observability</strong></td><td>Record sensitive reads, changes, AI actions, integration events, failures and administrator activity.</td><td>Security, operations and support.</td></tr>
+</table>
+
+<h3>Recommended technology direction</h3>
+<p><strong>Frontend:</strong> React, TypeScript and TailwindCSS with portal-specific feature modules and a shared design system.</p>
+<p><strong>Initial backend:</strong> Supabase for managed PostgreSQL, authentication, Row-Level Security, Storage, Realtime and server-side functions. It is suitable for the foundation if migrations and security policies are treated as production code.</p>
+<p><strong>Later service layer:</strong> Add a dedicated TypeScript API or worker service when integrations, payments, reservations or AI workflows require long-running jobs, queues, stricter orchestration or vendor isolation. This can be added without replacing PostgreSQL or authentication.</p>
+
+<div class="pagebreak"></div>
+<h2>9. Core business data model</h2>
+<p>The following domains should exist before individual screens are allowed to invent their own structures.</p>
+<table>
+  <tr><th style="width:24%">Domain</th><th style="width:42%">Core records</th><th style="width:34%">Key relationship</th></tr>
+  <tr><td><strong>Identity</strong></td><td>User, profile, session, invitation, access membership.</td><td>A user may hold one or more access memberships.</td></tr>
+  <tr><td><strong>Organization</strong></td><td>Organization, department, team, employee, agency, location.</td><td>Operational records belong to an organization and often a location.</td></tr>
+  <tr><td><strong>Authorization</strong></td><td>Role, permission, membership role, policy.</td><td>Permissions attach to a membership, not merely an email address.</td></tr>
+  <tr><td><strong>Customer</strong></td><td>Customer, party, consent, preference, relationship, account owner.</td><td>A customer may have direct and agent-managed bookings.</td></tr>
+  <tr><td><strong>Catalog</strong></td><td>Product, experience, variant, media, fact sheet, restriction.</td><td>Availability and rates reference stable product identifiers.</td></tr>
+  <tr><td><strong>Commercial</strong></td><td>Rate plan, contract, price rule, quote and validity period.</td><td>Eligible rates depend on agency, market, product and date.</td></tr>
+  <tr><td><strong>Booking</strong></td><td>Enquiry, reservation, booking, participant, status history and external reference.</td><td>Every imported record retains source and external ID.</td></tr>
+  <tr><td><strong>Engagement</strong></td><td>Conversation, message, document, notification and activity.</td><td>Engagement records link back to customers, agents and bookings.</td></tr>
+  <tr><td><strong>Operations</strong></td><td>Task, duty, meeting, attendance, incident and announcement.</td><td>Work has an owner, status, deadline and audit history.</td></tr>
+  <tr><td><strong>AI governance</strong></td><td>AI conversation, tool invocation, approval, source and outcome.</td><td>Every material AI action is attributable and reviewable.</td></tr>
+</table>
+
+<h3>Source-of-truth rule</h3>
+<p>Each important field must have an owner. For example, if Activitar owns booking confirmation and inventory, Shearwater may mirror those records but must not silently contradict them. The platform should store external IDs, synchronization status, source timestamps and error details.</p>
+
+<h2>10. Unified authentication and authorization</h2>
+<ol>
+  <li>The user opens one branded authentication experience.</li>
+  <li>Supabase verifies the identity and returns a secure session.</li>
+  <li>The platform loads active access memberships.</li>
+  <li>If only one context exists, the user is routed to it. If several exist, a workspace switcher is shown.</li>
+  <li>Every data request is checked again at database or server level using membership and permission rules.</li>
+</ol>
+<table class="callout"><tr><td><strong>Important:</strong> Hiding a navigation item is not security. Portal routes, API operations, database rows, files and AI tools must all enforce the same authorization policy.</td></tr></table>
+
+<h3>Minimum security controls</h3>
+<ul>
+  <li>Row-Level Security on every exposed company or customer table.</li>
+  <li>Organization identifier on every organization-owned record.</li>
+  <li>MFA for administrators and selected high-risk Team roles.</li>
+  <li>Service credentials restricted to trusted server environments.</li>
+  <li>Invitation-only onboarding for Team and Agent Access.</li>
+  <li>Email verification, reset-password flow, session revocation and disabled-account handling.</li>
+  <li>Consent, retention and access policies for customer data and AI conversations.</li>
+  <li>Audit logging for access changes, commercial changes and AI actions.</li>
+</ul>
+
+<div class="pagebreak"></div>
+<h2>11. Integration model</h2>
+<h3>Activitar</h3>
+<p>The current vision identifies Activitar as a source of imported orders and potentially availability. Before development, the business must decide whether Activitar is authoritative for products, inventory, prices, reservations, confirmations and payments individually. The answer may differ by capability.</p>
+
+<h3>Integration pattern</h3>
+<ol>
+  <li>Receive data through a documented API, webhook or scheduled synchronization.</li>
+  <li>Validate and map external identifiers to internal records.</li>
+  <li>Process the message idempotently so retries cannot create duplicates.</li>
+  <li>Store source, timestamp, status and raw failure context safely.</li>
+  <li>Publish a platform event for notifications, CRM and operational tasks.</li>
+  <li>Provide reconciliation tools for unmatched or failed records.</li>
+</ol>
+
+<h3>Other likely integrations</h3>
+<ul>
+  <li>Email provider for invitations, notifications and controlled outbound messages.</li>
+  <li>Website chat and customer entry points.</li>
+  <li>Calendar and meeting provider if required.</li>
+  <li>Payment provider only after booking ownership and financial workflows are agreed.</li>
+  <li>AI model provider behind a Shearwater-controlled orchestration and audit layer.</li>
+</ul>
+
+<h2>12. Critical end-to-end workflows to define</h2>
+<table>
+  <tr><th style="width:29%">Workflow</th><th style="width:35%">Required outcome</th><th style="width:36%">Decision needed</th></tr>
+  <tr><td><strong>Direct customer booking</strong></td><td>Customer receives an accurate price and valid confirmation without duplicate inventory.</td><td>Which system creates and confirms the booking?</td></tr>
+  <tr><td><strong>Agent quote and booking</strong></td><td>Eligible agent receives correct availability, rate and conditions.</td><td>Can agents confirm immediately or submit for approval?</td></tr>
+  <tr><td><strong>Activitar order import</strong></td><td>Order is matched to customer, product and source exactly once.</td><td>Which fields can Shearwater edit after import?</td></tr>
+  <tr><td><strong>Customer conversation handover</strong></td><td>A staff member receives context, ownership and urgency without asking the guest to repeat everything.</td><td>Which queues, hours and response targets apply?</td></tr>
+  <tr><td><strong>Harold operational action</strong></td><td>An authorized action is executed once, confirmed and audited.</td><td>Which actions are automatic, confirm-first or human-only?</td></tr>
+  <tr><td><strong>Meeting to action</strong></td><td>Notes become reviewed action items with owners and deadlines.</td><td>Who approves AI-generated notes and assignments?</td></tr>
+</table>
+
+<div class="pagebreak"></div>
+<h2>13. Delivery roadmap</h2>
+<table>
+  <tr><th style="width:15%">Phase</th><th style="width:27%">Goal</th><th style="width:42%">Deliverables</th><th style="width:16%">Gate</th></tr>
+  <tr><td><strong>0</strong><br>Alignment</td><td>Confirm business ownership and source-of-truth decisions.</td><td>Capability map, workflows, glossary, access matrix, integration decisions and acceptance criteria.</td><td>Stakeholder sign-off.</td></tr>
+  <tr><td><strong>1</strong><br>Foundation</td><td>Create secure multi-company identity and access.</td><td>Supabase environments, migrations, profiles, organizations, memberships, roles, permissions, invitations, audit and universal auth.</td><td>Cross-company isolation tests pass.</td></tr>
+  <tr><td><strong>2</strong><br>Team Access</td><td>Replace the dashboard sketch with real internal operations.</td><td>Company directory, Basecamp, tasks, meetings, announcements, attendance, notifications and settings.</td><td>Selected team uses it with real data.</td></tr>
+  <tr><td><strong>3</strong><br>CRM + communication</td><td>Create customer and partner relationship context.</td><td>Customer profiles, agent accounts, conversations, documents, handover and activity timeline.</td><td>Data ownership and consent verified.</td></tr>
+  <tr><td><strong>4</strong><br>Booking integration</td><td>Safely expose booking and availability information.</td><td>Activitar adapter, product mapping, imports, reconciliation, availability and booking views.</td><td>Reconciliation and failure recovery pass.</td></tr>
+  <tr><td><strong>5</strong><br>Agent Access</td><td>Enable approved partners.</td><td>Agency onboarding, contracted rates, product library, enquiries, quotes and booking management.</td><td>Pilot agency completes agreed flow.</td></tr>
+  <tr><td><strong>6</strong><br>Customer Access</td><td>Enable the guest journey.</td><td>Customer account, booking view, documents, live chat and approved direct-booking flow.</td><td>Guest journey and privacy review pass.</td></tr>
+  <tr><td><strong>7</strong><br>Harold actions</td><td>Move from assistance to controlled automation.</td><td>Knowledge retrieval, drafting, recommendations, approvals, tool actions, handover and AI audit.</td><td>Accuracy, permission and rollback tests pass.</td></tr>
+</table>
+
+<h3>What should not happen</h3>
+<ul>
+  <li>Do not build all portal screens before the shared data and permission model.</li>
+  <li>Do not let each portal create a separate customer or booking database.</li>
+  <li>Do not connect Harold directly to unrestricted database credentials.</li>
+  <li>Do not make direct booking assumptions before Activitar ownership is agreed.</li>
+  <li>Do not treat the current dashboard mock data as the production domain model.</li>
+</ul>
+
+<div class="pagebreak"></div>
+<h2>14. Decisions required from the meeting</h2>
+<table>
+  <tr><th style="width:8%">#</th><th style="width:52%">Question</th><th style="width:40%">Why it matters</th></tr>
+  <tr><td>1</td><td>What is the first business problem this platform must solve in production?</td><td>Defines the first usable release and prevents uncontrolled scope.</td></tr>
+  <tr><td>2</td><td>Is Activitar authoritative for inventory, prices, bookings and payments?</td><td>Determines data model, integrations and transaction safety.</td></tr>
+  <tr><td>3</td><td>Can customers book directly, or should they submit enquiries first?</td><td>Changes payment, confirmation, availability and support requirements.</td></tr>
+  <tr><td>4</td><td>Can agents confirm bookings, or do they require Shearwater approval?</td><td>Determines statuses, permissions and service expectations.</td></tr>
+  <tr><td>5</td><td>How are agent rates defined and who is allowed to change them?</td><td>Commercial confidentiality and pricing accuracy are critical.</td></tr>
+  <tr><td>6</td><td>Which companies, departments, branches and locations must be represented?</td><td>Establishes the multi-company and organizational boundaries.</td></tr>
+  <tr><td>7</td><td>Which existing CRM, email, calendar and document systems must remain?</td><td>Avoids replacing tools without a migration or integration plan.</td></tr>
+  <tr><td>8</td><td>Which Harold actions may be automatic, require confirmation or remain human-only?</td><td>Defines AI risk and approval policy.</td></tr>
+  <tr><td>9</td><td>What customer data may be collected, retained and used by AI?</td><td>Defines consent, privacy, retention and access controls.</td></tr>
+  <tr><td>10</td><td>Who is the business owner for each portal and shared service?</td><td>Every workflow and dataset requires an accountable decision-maker.</td></tr>
+</table>
+
+<h3>Recommended meeting outcome</h3>
+<table class="callout callout-green"><tr><td>Leave the meeting with one agreed first production workflow, named business owners, an Activitar source-of-truth decision, a confirmed access model and approval to build Phase 1: Unified Identity and Access.</td></tr></table>
+
+<h2>15. Developer definition of done</h2>
+<p>A feature is not complete merely because the screen exists. For this platform, definition of done includes:</p>
+<ul>
+  <li>Real database records and migrations, with typed application interfaces.</li>
+  <li>Authentication, authorization and Row-Level Security tests.</li>
+  <li>Loading, empty, error, offline or retry behavior where relevant.</li>
+  <li>Audit history for sensitive actions.</li>
+  <li>Accessible and responsive user experience.</li>
+  <li>Integration idempotency and reconciliation for external records.</li>
+  <li>Monitoring, structured errors and support diagnostics.</li>
+  <li>Acceptance criteria demonstrated using realistic role-based scenarios.</li>
+</ul>
+
+<h2>16. Closing statement</h2>
+<p>The platform's value will come from connecting people and workflows around trusted operational data. Team, Agent and Customer Access are different experiences, but they must share one identity model, one permission system and one set of business records. Harold should make that platform easier to use; Harold should never become a shortcut around its security or business rules.</p>
+</body>
+</html>
