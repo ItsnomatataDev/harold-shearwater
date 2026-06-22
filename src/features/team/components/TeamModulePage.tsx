@@ -34,10 +34,10 @@ export function TeamModulePage({
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-lg font-semibold text-white">Build checklist</h2>
           <Link
-            href="/team/basecamp"
+            href="/team/dashboard"
             className="text-xs font-semibold uppercase tracking-[.14em] text-victoria hover:text-[#6dc6e5]"
           >
-            Back to basecamp
+            Back to dashboard
           </Link>
         </div>
         <ol className="mt-4 space-y-2">

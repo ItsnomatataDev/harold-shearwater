@@ -23,7 +23,7 @@ export function CreateTaskForm({ organizationId }: { organizationId: string }) {
 
     try {
       await createTask(organizationId, { title, description, priority });
-      setMessage("Task created successfully");
+      setMessage("Duty item created successfully");
       setTitle("");
       setDescription("");
       setPriority("medium");
@@ -33,7 +33,7 @@ export function CreateTaskForm({ organizationId }: { organizationId: string }) {
       }, 2000);
     } catch (cause) {
       setError(
-        cause instanceof Error ? cause.message : "Failed to create task",
+        cause instanceof Error ? cause.message : "Failed to create duty item",
       );
     } finally {
       setLoading(false);
@@ -48,38 +48,38 @@ export function CreateTaskForm({ organizationId }: { organizationId: string }) {
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-sunset px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#f0674e]"
         >
           <Icon name="plus" className="h-4 w-4" />
-          Create task
+          Add duty item
         </button>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-[#b7b7b0]">
-              Task title
+              Duty title
             </label>
             <input
               required
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="What needs to be done?"
+              placeholder="What duty needs to be done?"
               className="mt-2 w-full rounded-xl border border-[#3a3a36] bg-[#232321] px-4 py-3 text-sm text-white placeholder:text-[#62625d] focus:border-victoria focus:outline-none"
             />
           </div>
           <div>
             <label className="block text-xs font-semibold text-[#b7b7b0]">
-              Description (optional)
+              Details (optional)
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Add details or context…"
+              placeholder="Add shift details, handover notes, or context…"
               rows={3}
               className="mt-2 w-full rounded-xl border border-[#3a3a36] bg-[#232321] px-4 py-3 text-sm text-white placeholder:text-[#62625d] focus:border-victoria focus:outline-none"
             />
           </div>
           <div>
             <label className="block text-xs font-semibold text-[#b7b7b0]">
-              Priority
+              Urgency
             </label>
             <select
               value={priority}
@@ -108,7 +108,7 @@ export function CreateTaskForm({ organizationId }: { organizationId: string }) {
               disabled={loading}
               className="flex-1 rounded-xl bg-sunset px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-[#f0674e] disabled:opacity-60"
             >
-              {loading ? "Creating…" : "Create task"}
+              {loading ? "Saving…" : "Save duty item"}
             </button>
             <button
               type="button"

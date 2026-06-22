@@ -51,7 +51,7 @@ export function TasksList({
       router.refresh();
     } catch (cause) {
       setError(
-        cause instanceof Error ? cause.message : "Failed to update task",
+        cause instanceof Error ? cause.message : "Failed to update duty item",
       );
     } finally {
       setLoading(false);
@@ -165,7 +165,7 @@ export function TasksList({
         ) : (
           <div className="rounded-xl border border-[#343431] bg-[#1d1d1b] px-6 py-12 text-center">
             <p className="text-sm text-[#8a8a84]">
-              No tasks {filter !== "all" && `in ${filter}`} status
+              No duty items {filter !== "all" && `in ${filter}`} status
             </p>
           </div>
         )}

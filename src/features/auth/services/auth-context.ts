@@ -27,7 +27,7 @@ export interface AuthContext {
 }
 
 export function getAccessHomePath(accessType: AccessType) {
-  if (accessType === "team") return "/team/basecamp";
+  if (accessType === "team") return "/team/dashboard";
   if (accessType === "agent") return "/agent";
   return "/customer";
 }

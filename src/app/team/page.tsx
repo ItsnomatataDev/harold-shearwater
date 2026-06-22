@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function TeamIndexPage() {
-  redirect("/team/basecamp");
+  redirect("/team/dashboard");
 }

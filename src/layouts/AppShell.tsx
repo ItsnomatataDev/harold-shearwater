@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
@@ -19,9 +20,9 @@ const baseNavigation: {
   icon: IconName;
   badge?: string;
 }[] = [
-  { label: "Basecamp", href: "/team/basecamp", icon: "home" },
+  { label: "Dashboard", href: "/team/dashboard", icon: "insights" },
   { label: "Attendance", href: "/team/attendance", icon: "insights" },
-  { label: "Operations", href: "/team/operations", icon: "operations" },
+  { label: "My Schedules / Duties", href: "/team/schedules", icon: "calendar" },
   {
     label: "Communication",
     href: "/team/communication",
@@ -37,19 +38,23 @@ const baseNavigation: {
 function Logo() {
   return (
     <div className="flex items-center gap-3">
-      <div className="grid h-10 w-10 grid-cols-2 overflow-hidden rounded-[11px] border border-white/10 bg-[#171716] p-1.5">
-        <span className="rounded-tl bg-sunset" />
-        <span className="rounded-tr-full bg-gold" />
-        <span className="rounded-bl-full bg-victoria" />
-        <span className="rounded-br bg-savannah" />
+      <div className="flex h-20 w-20 items-center justify-center overflow-hidden">
+        <Image
+          src="/swicon.png"
+          alt="Shearwater"
+          width={80}
+          height={80}
+          className="h-20 w-20 object-contain object-center"
+          priority
+        />
       </div>
-      <div>
-        <div className="text-[15px] font-bold tracking-[.16em] text-white">
-          SHEARWATER
-        </div>
-        <div className="mt-0.5 text-[9px] font-semibold tracking-[.22em] text-[#8b8b84]">
-          VICTORIA FALLS
-        </div>
+      <div className="min-w-0">
+        <p className="text-[13px] font-bold uppercase tracking-[.12em] text-white">
+          Shearwater
+        </p>
+        <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-[.16em] text-[#8b8b84]">
+          Victoria Falls
+        </p>
       </div>
     </div>
   );
