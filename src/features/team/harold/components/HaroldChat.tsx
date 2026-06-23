@@ -13,7 +13,8 @@ import type {
 import { requestHumanHandover, sendHaroldMessage } from "../harold-actions";
 
 type MessageRow = Database["public"]["Tables"]["harold_messages"]["Row"];
-type ConversationRow = Database["public"]["Tables"]["harold_conversations"]["Row"];
+type ConversationRow =
+  Database["public"]["Tables"]["harold_conversations"]["Row"];
 
 const statusDetails: Record<
   HaroldConversationStatus,
@@ -76,13 +77,22 @@ export function HaroldChat({
       ),
     ),
   );
+  const scrollEndRef = useRef<HTMLDivElement>(null);
   const [conversations, setConversations] = useState(initialConversations);
-  const [selectedId, setSelectedId] = useState(initialConversations[0]?.id ?? "");
+  const [selectedId, setSelectedId] = useState(
+    initialConversations[0]?.id ?? "",
+  );
   const [input, setInput] = useState("");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const selected = conversations.find((conversation) => conversation.id === selectedId);
+  const selected = conversations.find(
+    (conversation) => conversation.id === selectedId,
+  );
+
+  useEffect(() => {
+    scrollEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [selected?.messages.length, pending]);
 
   useEffect(() => {
     if (!selectedId) return;
@@ -104,7 +114,10 @@ export function HaroldChat({
           setConversations((current) =>
             current.map((conversation) =>
               conversation.id === selectedId
-                ? { ...conversation, messages: [...conversation.messages, message] }
+                ? {
+                    ...conversation,
+                    messages: [...conversation.messages, message],
+                  }
                 : conversation,
             ),
           );
@@ -154,7 +167,9 @@ export function HaroldChat({
       return true;
     });
     setConversations((current) => {
-      const existing = current.find((conversation) => conversation.id === conversationId);
+      const existing = current.find(
+        (conversation) => conversation.id === conversationId,
+      );
       if (existing) {
         return current.map((conversation) =>
           conversation.id === conversationId
@@ -207,7 +222,9 @@ export function HaroldChat({
         if (result.aiError) setError(result.aiError);
       } catch (cause) {
         setInput(content);
-        setError(cause instanceof Error ? cause.message : "Unable to send message.");
+        setError(
+          cause instanceof Error ? cause.message : "Unable to send message.",
+        );
       }
     });
   }
@@ -235,7 +252,11 @@ export function HaroldChat({
         );
         setNotice("Human assistance requested. Team Access has been notified.");
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "Unable to request a handover.");
+        setError(
+          cause instanceof Error
+            ? cause.message
+            : "Unable to request a handover.",
+        );
       }
     });
   }
@@ -339,7 +360,9 @@ export function HaroldChat({
                 <p className="mb-1 text-[9px] font-bold uppercase tracking-[.08em] opacity-60">
                   {message.authorName}
                 </p>
-                <p className="whitespace-pre-wrap text-sm leading-6">{message.content}</p>
+                <p className="whitespace-pre-wrap text-sm leading-6">
+                  {message.content}
+                </p>
               </div>
             </div>
           ))}
@@ -347,12 +370,42 @@ export function HaroldChat({
           {(!selected || !selected.messages.length) && (
             <div className="grid min-h-72 place-items-center text-center">
               <div>
-                <Icon name="sparkles" className="mx-auto h-7 w-7 text-victoria" />
-                <p className="mt-4 text-sm font-semibold text-white">Ask Harold</p>
-                <p className="mx-auto mt-2 max-w-md text-xs leading-5 text-[#777771]">
-                  Harold sends your message securely to the configured n8n workflow.
-                  You can request a Team Access handover whenever human help is needed.
+                <Icon
+                  name="sparkles"
+                  className="mx-auto h-7 w-7 text-victoria"
+                />
+                <p className="mt-4 text-sm font-semibold text-white">
+                  Ask Harold
                 </p>
+                <p className="mx-auto mt-2 max-w-md text-xs leading-5 text-[#777771]">
+                  Harold sends your message securely to the configured n8n
+                  workflow. You can request a Team Access handover whenever
+                  human help is needed.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {pending && status === "ai_active" && (
+            <div className="flex justify-start">
+              <div className="rounded-2xl bg-[#292927] px-4 py-3">
+                <p className="mb-1 text-[9px] font-bold uppercase tracking-[.08em] opacity-60">
+                  Harold
+                </p>
+                <div className="flex items-center gap-1.5 py-1.5">
+                  <span
+                    className="h-2 w-2 animate-bounce rounded-full bg-[#666]"
+                    style={{ animationDelay: "0ms" }}
+                  />
+                  <span
+                    className="h-2 w-2 animate-bounce rounded-full bg-[#666]"
+                    style={{ animationDelay: "150ms" }}
+                  />
+                  <span
+                    className="h-2 w-2 animate-bounce rounded-full bg-[#666]"
+                    style={{ animationDelay: "300ms" }}
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -381,9 +434,13 @@ export function HaroldChat({
               )}
             </div>
           )}
+          <div ref={scrollEndRef} />
         </div>
 
-        <form onSubmit={submit} className="flex gap-2 border-t border-[#343431] p-4">
+        <form
+          onSubmit={submit}
+          className="flex gap-2 border-t border-[#343431] p-4"
+        >
           <input
             value={input}
             onChange={(event) => setInput(event.target.value)}
@@ -399,7 +456,9 @@ export function HaroldChat({
             className="input flex-1"
           />
           <button
-            disabled={pending || !input.trim() || selected?.status === "resolved"}
+            disabled={
+              pending || !input.trim() || selected?.status === "resolved"
+            }
             className="rounded-xl bg-victoria px-4 text-white disabled:opacity-50"
           >
             <Icon name="send" className="h-4 w-4" />

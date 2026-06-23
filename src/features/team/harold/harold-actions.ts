@@ -5,7 +5,10 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireTeamContext } from "@/features/auth/services/auth-context";
-import { isHaroldWebhookConfigured, sendToHaroldWebhook } from "./harold-webhook";
+import {
+  isHaroldWebhookConfigured,
+  sendToHaroldWebhook,
+} from "./harold-webhook";
 import type { HaroldConversationStatus, HaroldMessage } from "./harold-service";
 
 const messageSchema = z.object({
@@ -26,7 +29,10 @@ async function guardOrganization(organizationId: string) {
   return team;
 }
 
-export async function sendHaroldMessage(organizationId: string, input: unknown) {
+export async function sendHaroldMessage(
+  organizationId: string,
+  input: unknown,
+) {
   const parsed = messageSchema.parse(input);
   const team = await guardOrganization(organizationId);
   const supabase = await createClient();
@@ -45,7 +51,9 @@ export async function sendHaroldMessage(organizationId: string, input: unknown) 
     if (!data) throw new Error("Conversation not found.");
     status = data.status as HaroldConversationStatus;
     if (status === "resolved") {
-      throw new Error("This conversation is resolved. Start a new conversation to continue.");
+      throw new Error(
+        "This conversation is resolved. Start a new conversation to continue.",
+      );
     }
   } else {
     const { data, error } = await supabase
@@ -126,12 +134,10 @@ export async function sendHaroldMessage(organizationId: string, input: unknown) 
         content: userMessage.content,
         createdAt: userMessage.createdAt,
       },
-      history: (historyResult.data ?? [])
-        .reverse()
-        .map((item) => ({
-          role: item.role as "user" | "assistant" | "human" | "system",
-          content: item.content,
-        })),
+      history: (historyResult.data ?? []).reverse().map((item) => ({
+        role: item.role as "user" | "assistant" | "human" | "system",
+        content: item.content,
+      })),
     });
 
     const admin = createAdminClient();
@@ -160,7 +166,8 @@ export async function sendHaroldMessage(organizationId: string, input: unknown) 
     }
 
     if (webhookResult.handover) {
-      const reason = webhookResult.handoverReason ?? "Harold requested human assistance.";
+      const reason =
+        webhookResult.handoverReason ?? "Harold requested human assistance.";
       const { error } = await admin
         .from("harold_conversations")
         .update({
@@ -182,7 +189,8 @@ export async function sendHaroldMessage(organizationId: string, input: unknown) 
           .insert({
             conversation_id: conversationId,
             role: "system",
-            content: "Harold has requested assistance from a Shearwater team member.",
+            content:
+              "I've passed this conversation to the Shearwater team. Someone will be with you shortly — they'll have full context of everything we've discussed.",
             metadata: { reason },
           })
           .select("id,created_at")
@@ -192,7 +200,8 @@ export async function sendHaroldMessage(organizationId: string, input: unknown) 
           id: data.id,
           conversationId,
           role: "system",
-          content: "Harold has requested assistance from a Shearwater team member.",
+          content:
+            "Harold has requested assistance from a Shearwater team member.",
           authorName: "System",
           createdAt: data.created_at,
         });
@@ -229,7 +238,10 @@ export async function sendHaroldMessage(organizationId: string, input: unknown) 
   }
 }
 
-export async function requestHumanHandover(organizationId: string, input: unknown) {
+export async function requestHumanHandover(
+  organizationId: string,
+  input: unknown,
+) {
   const parsed = handoverSchema.parse(input);
   await guardOrganization(organizationId);
   const supabase = await createClient();
@@ -244,7 +256,8 @@ export async function requestHumanHandover(organizationId: string, input: unknow
     .insert({
       conversation_id: parsed.conversationId,
       role: "system",
-      content: "Human assistance requested. A Shearwater team member can now take over this conversation.",
+      content:
+        "Human assistance requested. A Shearwater team member can now take over this conversation.",
       metadata: { reason: parsed.reason ?? null },
     });
   if (messageError) throw new Error(messageError.message);
