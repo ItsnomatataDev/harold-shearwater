@@ -11,18 +11,205 @@
   --font-sans: "Inter", "Avenir Next", "Segoe UI", sans-serif;
 }
 
-:root { color: #e9e9e4; background: #111; font-family: var(--font-sans); font-synthesis: none; }
+:root {
+  color-scheme: dark;
+  --canvas: #111111;
+  --surface-card: #1d1d1b;
+  --surface-soft: #242422;
+  --surface-hover: #2b2b29;
+  --border: #343431;
+  --border-strong: #4b4b46;
+  --text-primary: #f8f8f5;
+  --text-secondary: #9a9a94;
+  --text-muted: #70706a;
+  color: var(--text-primary);
+  background: var(--canvas);
+  font-family: var(--font-sans);
+  font-synthesis: none;
+}
+html[data-theme="light"] {
+  color-scheme: light;
+  --canvas: #f8f8f5;
+  --surface-card: #ffffff;
+  --surface-soft: #efeee8;
+  --surface-hover: #e7e5dd;
+  --border: #dedcd3;
+  --border-strong: #c7c3b8;
+  --text-primary: #171716;
+  --text-secondary: #625f57;
+  --text-muted: #858178;
+}
 * { box-sizing: border-box; }
-html { background: #111; }
-body { margin: 0; min-width: 320px; min-height: 100vh; background: #111; }
+html { background: var(--canvas); }
+body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--canvas); color: var(--text-primary); }
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid #1698c8; outline-offset: 2px; }
 ::selection { background: rgba(22,152,200,.35); }
-.app-bg { background: radial-gradient(circle at 82% 0%, rgba(22,152,200,.08), transparent 28rem), radial-gradient(circle at 55% 100%, rgba(231,179,71,.05), transparent 34rem), #111; }
-.card { background: rgba(30,30,29,.88); border: 1px solid #30302e; border-radius: 18px; }
-.soft-card { background: #242422; border: 1px solid #343431; border-radius: 14px; }
-.input { width: 100%; border: 1px solid #3a3a36; border-radius: 12px; background: #232321; padding: .7rem .85rem; color: white; font-size: .8125rem; outline: none; }
+.app-bg { background: radial-gradient(circle at 82% 0%, rgba(22,152,200,.08), transparent 28rem), radial-gradient(circle at 55% 100%, rgba(231,179,71,.05), transparent 34rem), var(--canvas); }
+.card { background: var(--surface-card); border: 1px solid var(--border); border-radius: 18px; }
+.soft-card { background: var(--surface-soft); border: 1px solid var(--border); border-radius: 14px; }
+.input { width: 100%; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-soft); padding: .7rem .85rem; color: var(--text-primary); font-size: .8125rem; outline: none; }
 .input:focus { border-color: #1698c8; }
 @keyframes slide-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 .animate-in { animation: slide-up .45s ease both; }
+
+.Toastify__toast-container { width: min(390px, calc(100vw - 2rem)); }
+.Toastify__toast {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface-card);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .42);
+  color: var(--text-primary);
+  padding: .8rem .9rem;
+}
+.Toastify__progress-bar { background: linear-gradient(90deg, #e95a41, #e7b347); }
+.Toastify__close-button { color: #8e8e88; opacity: .8; }
+
+/*
+ * Sprint 1 originally used literal charcoal values. This compatibility layer
+ * maps those operational surfaces onto the semantic theme without weakening
+ * the dark, always-charcoal navigation rail.
+ */
+html[data-theme="light"] .shell-header {
+  border-color: var(--border) !important;
+  background: color-mix(in srgb, var(--canvas) 90%, transparent) !important;
+}
+html[data-theme="light"] .shell-content :is(
+  [class~="bg-[#111]"],
+  [class~="bg-[#111]/90"],
+  [class~="bg-[#151514]"],
+  [class~="bg-[#171716]"],
+  [class~="bg-[#181816]"],
+  [class~="bg-[#191918]"],
+  [class~="bg-[#1a1a18]"],
+  [class~="bg-[#1b1b19]"],
+  [class~="bg-[#1d1d1b]"],
+  [class~="bg-[#1d1d1b]/80"],
+  [class~="bg-[#1d1d1c]"]
+) { background-color: var(--surface-card) !important; }
+html[data-theme="light"] .shell-content :is(
+  [class~="bg-[#20201e]"],
+  [class~="bg-[#212120]"],
+  [class~="bg-[#222220]"],
+  [class~="bg-[#232321]"],
+  [class~="bg-[#242422]"],
+  [class~="bg-[#252523]"],
+  [class~="bg-[#292927]"],
+  [class~="bg-[#2b2b29]"],
+  [class~="bg-[#30302d]"],
+  [class~="bg-[#30302e]"],
+  [class~="bg-[#333]"],
+  [class~="bg-[#333330]"],
+  [class~="bg-[#343431]"],
+  [class~="bg-[#3b3b37]"]
+) { background-color: var(--surface-soft) !important; }
+html[data-theme="light"] .shell-content [class*="border-[#"] {
+  border-color: var(--border) !important;
+}
+html[data-theme="light"] .shell-content :is(
+  .text-white,
+  [class~="text-[#f7f7f2]"],
+  [class~="text-[#f4f4ef]"],
+  [class~="text-[#f2f2ed]"],
+  [class~="text-[#edede8]"],
+  [class~="text-[#ebebe5]"],
+  [class~="text-[#e6e6df]"],
+  [class~="text-[#e5e5df]"],
+  [class~="text-[#e4e4de]"],
+  [class~="text-[#e2e2dc]"],
+  [class~="text-[#e1e1db]"],
+  [class~="text-[#deded8]"],
+  [class~="text-[#ddd]"],
+  [class~="text-[#d9d9d3]"],
+  [class~="text-[#d8d8d2]"],
+  [class~="text-[#d7d7d0]"],
+  [class~="text-[#d6d6cf]"],
+  [class~="text-[#d5d5ce]"],
+  [class~="text-[#d3d3cc]"],
+  [class~="text-[#d2d2cc]"],
+  [class~="text-[#d2d2cb]"],
+  [class~="text-[#d0d0c9]"],
+  [class~="text-[#cfcfc8]"],
+  [class~="text-[#ccc]"],
+  [class~="text-[#cbc9c2]"],
+  [class~="text-[#c8c8c2]"],
+  [class~="text-[#c8c8c1]"],
+  [class~="text-[#c7c7c0]"]
+) { color: var(--text-primary) !important; }
+html[data-theme="light"] .shell-content :is(
+  [class~="text-[#bbb]"],
+  [class~="text-[#b9b9b2]"],
+  [class~="text-[#b8b8b1]"],
+  [class~="text-[#b7b7b0]"],
+  [class~="text-[#aaa]"],
+  [class~="text-[#aaa9a2]"],
+  [class~="text-[#a8a8a1]"],
+  [class~="text-[#a5a59f]"],
+  [class~="text-[#a0a09a]"],
+  [class~="text-[#999]"],
+  [class~="text-[#9c9c96]"],
+  [class~="text-[#9b9b95]"],
+  [class~="text-[#9a9a94]"],
+  [class~="text-[#92928c]"],
+  [class~="text-[#91918b]"],
+  [class~="text-[#90908a]"],
+  [class~="text-[#8f8f89]"],
+  [class~="text-[#8e8e88]"],
+  [class~="text-[#8d8d87]"],
+  [class~="text-[#8c8c86]"],
+  [class~="text-[#8c8c85]"],
+  [class~="text-[#8b8b85]"],
+  [class~="text-[#8b8b84]"],
+  [class~="text-[#8a8a84]"],
+  [class~="text-[#898983]"],
+  [class~="text-[#888]"],
+  [class~="text-[#888882]"],
+  [class~="text-[#868680]"],
+  [class~="text-[#85857f]"],
+  [class~="text-[#85857e]"],
+  [class~="text-[#83837d]"],
+  [class~="text-[#81817b]"],
+  [class~="text-[#7d7d77]"],
+  [class~="text-[#7b7b75]"],
+  [class~="text-[#797973]"],
+  [class~="text-[#777]"],
+  [class~="text-[#777772]"],
+  [class~="text-[#777771]"],
+  [class~="text-[#74746e]"],
+  [class~="text-[#73736d]"],
+  [class~="text-[#72726c]"],
+  [class~="text-[#71716b]"],
+  [class~="text-[#70706a]"],
+  [class~="text-[#6f6f69]"],
+  [class~="text-[#696963]"],
+  [class~="text-[#686862]"],
+  [class~="text-[#676761]"],
+  [class~="text-[#666]"],
+  [class~="text-[#666660]"],
+  [class~="text-[#62625d]"],
+  [class~="text-[#60605b]"],
+  [class~="text-[#555]"]
+) { color: var(--text-secondary) !important; }
+html[data-theme="light"] .shell-content :is(
+  .bg-sunset,
+  .bg-earth,
+  .bg-victoria,
+  .bg-savannah,
+  [class~="bg-[#f0674e]"],
+  [class~="bg-[#f06a52]"]
+).text-white { color: #ffffff !important; }
+html[data-theme="light"] .shell-content :is(
+  [class~="hover:bg-[#20201e]"],
+  [class~="hover:bg-[#212120]"],
+  [class~="hover:bg-[#242422]"],
+  [class~="hover:bg-[#2b2b29]"],
+  [class~="hover:bg-[#333]"],
+  [class~="hover:bg-[#343431]"]
+):hover { background-color: var(--surface-hover) !important; }
+
+@media (prefers-reduced-motion: no-preference) {
+  body, .app-bg, .shell-header, .card, .soft-card, .input, .theme-toggle {
+    transition: background-color .2s ease, border-color .2s ease, color .2s ease;
+  }
+}

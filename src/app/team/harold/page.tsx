@@ -15,12 +15,12 @@ export default async function HaroldPage() {
     redirect("/auth/continue");
   }
 
-  const conversations = await getHaroldConversations(team.membership.organizationId);
+  const data = await getHaroldConversations(team.membership.organizationId);
   return (
     <section className="space-y-6">
-      <ModuleHeader eyebrow="Intelligent Operations" title="Harold" description="Build a real conversation history now. Governed AI answers will activate only after the AI service and knowledge controls are connected." />
+      <ModuleHeader eyebrow="Intelligent Operations" title="Harold" description="Ask Harold through the secure n8n AI workflow, keep a complete conversation history, and hand over to a Team Access member when human support is needed." />
 
-      <HaroldChat organizationId={team.membership.organizationId} initialConversations={conversations} />
+      <HaroldChat organizationId={team.membership.organizationId} initialConversations={data.conversations} webhookConfigured={data.webhookConfigured} />
     </section>
   );
 }

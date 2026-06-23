@@ -1,6 +1,6 @@
 import type { SVGProps } from 'react'
 
-export type IconName = 'home'|'crew'|'operations'|'communication'|'knowledge'|'harold'|'insights'|'settings'|'search'|'bell'|'chevron'|'menu'|'close'|'sun'|'users'|'route'|'check'|'clock'|'pin'|'plus'|'calendar'|'megaphone'|'file'|'arrow'|'sparkles'|'send'|'shield'
+export type IconName = 'home'|'crew'|'operations'|'communication'|'knowledge'|'harold'|'insights'|'settings'|'search'|'bell'|'chevron'|'menu'|'close'|'sun'|'moon'|'users'|'route'|'check'|'clock'|'pin'|'plus'|'calendar'|'megaphone'|'file'|'arrow'|'sparkles'|'send'|'shield'
 
 const paths: Record<IconName, React.ReactNode> = {
   home: <><path d="M3 10.8 12 3l9 7.8"/><path d="M5 9.5V21h14V9.5M9 21v-7h6v7"/></>,
@@ -14,6 +14,7 @@ const paths: Record<IconName, React.ReactNode> = {
   search: <><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></>, bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></>,
   chevron: <path d="m9 18 6-6-6-6"/>, menu: <><path d="M4 7h16M4 12h16M4 17h16"/></>, close: <><path d="m6 6 12 12M18 6 6 18"/></>,
   sun: <><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"/></>,
+  moon: <path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/>,
   users: <><circle cx="9" cy="8" r="3"/><path d="M3 21v-2a6 6 0 0 1 12 0v2M17 4a3 3 0 0 1 0 6M21 21v-2a5 5 0 0 0-3-4.6"/></>,
   route: <><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h3a3 3 0 0 0 3-3V8a3 3 0 0 1 3-3"/></>,
   check: <path d="m5 12 4 4L19 6"/>, clock: <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>, pin: <><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2"/></>,

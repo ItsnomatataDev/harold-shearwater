@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { hasOrganizationPermission, requireTeamContext } from "@/features/auth/services/auth-context";
 import { ModuleHeader } from "@/features/team/components/ModuleHeader";
@@ -13,7 +14,10 @@ export default async function CommunicationPage() {
 
   if (!team.membership.organizationId) redirect("/auth/continue");
   const organizationId = team.membership.organizationId;
-  const canManage = await hasOrganizationPermission(organizationId, "announcements.manage");
+  const [canManage, canManageHandovers] = await Promise.all([
+    hasOrganizationPermission(organizationId, "announcements.manage"),
+    hasOrganizationPermission(organizationId, "harold.handovers.manage"),
+  ]);
   const announcements = await getAnnouncements(organizationId);
-  return <section className="space-y-6"><ModuleHeader title="Communication" description="Read company notices and publish time-bound operational announcements from one trusted notice board."/><CommunicationBoard announcements={announcements} organizationId={organizationId} canManage={canManage}/></section>;
+  return <section className="space-y-6"><ModuleHeader title="Communication" description="Read company notices and manage AI conversations handed over to Team Access from one operational communication workspace." action={canManageHandovers ? <Link href="/team/communication/handovers" className="flex items-center gap-2 rounded-xl bg-savannah px-4 py-2.5 text-xs font-semibold text-[#102018]"><span className="h-2 w-2 rounded-full bg-[#102018]"/>Open handover inbox</Link> : undefined}/><CommunicationBoard announcements={announcements} organizationId={organizationId} canManage={canManage}/></section>;
 }

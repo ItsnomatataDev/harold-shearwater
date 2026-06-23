@@ -6,6 +6,10 @@ import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { Icon, type IconName } from "../components/Icon";
 import { SignOutButton } from "@/features/auth/components/SignOutButton";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { NotificationBell } from "@/features/team/notifications/components/NotificationBell";
+import { RealtimeNotificationListener } from "@/features/team/notifications/components/RealtimeNotificationListener";
+import type { NotificationView } from "@/features/team/notifications/notification-service";
 
 export interface ShellUser {
   name: string;
@@ -30,6 +34,7 @@ const baseNavigation: {
     href: "/team/communication",
     icon: "communication",
   },
+  { label: "Notifications", href: "/team/notifications", icon: "bell" },
   { label: "Knowledge Base", href: "/team/knowledge", icon: "knowledge" },
   { label: "Harold", href: "/team/harold", icon: "harold" },
   { label: "Reports", href: "/team/insights", icon: "insights" },
@@ -64,9 +69,19 @@ function Logo() {
 export function AppShell({
   children,
   user,
+  notifications,
+  notificationScope,
 }: {
   children: ReactNode;
   user: ShellUser;
+  notifications: {
+    unreadCount: number;
+    recent: NotificationView[];
+  };
+  notificationScope: {
+    userId: string;
+    organizationId: string;
+  };
 }) {
   const pathname = usePathname();
   const currentPath = pathname ?? "";
@@ -78,6 +93,10 @@ export function AppShell({
 
   return (
     <div className="app-bg min-h-screen">
+      <RealtimeNotificationListener
+        userId={notificationScope.userId}
+        organizationId={notificationScope.organizationId}
+      />
       {open && (
         <button
           aria-label="Close navigation"
@@ -86,6 +105,7 @@ export function AppShell({
         />
       )}
       <aside
+        data-shell-sidebar
         className={`fixed inset-y-0 left-0 z-50 flex w-[256px] flex-col border-r border-[#292927] bg-[#151514] px-4 py-5 transition-transform duration-300 lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
       >
         <div className="flex items-center justify-between px-2">
@@ -142,8 +162,8 @@ export function AppShell({
           </div>
         </div>
       </aside>
-      <div className="lg:pl-64">
-        <header className="sticky top-0 z-30 flex h-18 items-center justify-between border-b border-[#292927] bg-[#111]/90 px-5 backdrop-blur-xl sm:px-8 lg:px-10">
+      <div className="shell-content lg:pl-64">
+        <header className="shell-header sticky top-0 z-30 flex h-18 items-center justify-between border-b border-[#292927] bg-[#111]/90 px-5 backdrop-blur-xl sm:px-8 lg:px-10">
           <div className="flex items-center gap-3">
             <button
               aria-label="Open navigation"
@@ -162,19 +182,14 @@ export function AppShell({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              aria-label="Search"
-              className="rounded-xl p-2.5 text-[#8e8e88] transition hover:bg-[#242422] hover:text-white"
-            >
-              <Icon name="search" className="h-4.5 w-4.5" />
-            </button>
-            <button
-              aria-label="Notifications"
-              className="relative rounded-xl p-2.5 text-[#8e8e88] transition hover:bg-[#242422] hover:text-white"
-            >
-              <Icon name="bell" className="h-4.5 w-4.5" />
-              <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-sunset ring-2 ring-[#111]" />
-            </button>
+            <ThemeToggle />
+            <NotificationBell
+              key={`${notifications.unreadCount}:${notifications.recent
+                .map((item) => `${item.id}:${item.readAt ?? "unread"}`)
+                .join(",")}`}
+              initialUnreadCount={notifications.unreadCount}
+              initialNotifications={notifications.recent}
+            />
             <div className="ml-2 hidden h-8 w-px bg-[#30302e] sm:block" />
             <button className="ml-1 hidden items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-[#242422] sm:flex">
               <div className="grid h-8 w-8 place-items-center rounded-lg bg-earth text-[10px] font-bold text-white">

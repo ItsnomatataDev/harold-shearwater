@@ -406,30 +406,61 @@ export type Database = {
       }
       harold_conversations: {
         Row: {
+          assigned_to_membership_id: string | null
           created_at: string
+          handover_reason: string | null
+          handover_requested_at: string | null
+          handover_requested_by: string | null
           id: string
+          last_message_at: string
           organization_id: string
+          resolved_at: string | null
+          source_access: Database["public"]["Enums"]["access_type"]
+          status: string
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          assigned_to_membership_id?: string | null
           created_at?: string
+          handover_reason?: string | null
+          handover_requested_at?: string | null
+          handover_requested_by?: string | null
           id?: string
+          last_message_at?: string
           organization_id: string
+          resolved_at?: string | null
+          source_access?: Database["public"]["Enums"]["access_type"]
+          status?: string
           title: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          assigned_to_membership_id?: string | null
           created_at?: string
+          handover_reason?: string | null
+          handover_requested_at?: string | null
+          handover_requested_by?: string | null
           id?: string
+          last_message_at?: string
           organization_id?: string
+          resolved_at?: string | null
+          source_access?: Database["public"]["Enums"]["access_type"]
+          status?: string
           title?: string
           updated_at?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "harold_conversations_assigned_to_membership_id_fkey"
+            columns: ["assigned_to_membership_id"]
+            isOneToOne: false
+            referencedRelation: "access_memberships"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "harold_conversations_organization_id_fkey"
             columns: ["organization_id"]
@@ -441,24 +472,30 @@ export type Database = {
       }
       harold_messages: {
         Row: {
+          author_user_id: string | null
           content: string
           conversation_id: string
           created_at: string
           id: string
+          metadata: Json
           role: string
         }
         Insert: {
+          author_user_id?: string | null
           content: string
           conversation_id: string
           created_at?: string
           id?: string
+          metadata?: Json
           role: string
         }
         Update: {
+          author_user_id?: string | null
           content?: string
           conversation_id?: string
           created_at?: string
           id?: string
+          metadata?: Json
           role?: string
         }
         Relationships: [
@@ -671,6 +708,118 @@ export type Database = {
             columns: ["role_id"]
             isOneToOne: false
             referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_preferences: {
+        Row: {
+          access_enabled: boolean
+          announcements_enabled: boolean
+          attendance_enabled: boolean
+          created_at: string
+          email_enabled: boolean
+          in_app_enabled: boolean
+          knowledge_enabled: boolean
+          meetings_enabled: boolean
+          organization_id: string
+          schedules_enabled: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_enabled?: boolean
+          announcements_enabled?: boolean
+          attendance_enabled?: boolean
+          created_at?: string
+          email_enabled?: boolean
+          in_app_enabled?: boolean
+          knowledge_enabled?: boolean
+          meetings_enabled?: boolean
+          organization_id: string
+          schedules_enabled?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_enabled?: boolean
+          announcements_enabled?: boolean
+          attendance_enabled?: boolean
+          created_at?: string
+          email_enabled?: boolean
+          in_app_enabled?: boolean
+          knowledge_enabled?: boolean
+          meetings_enabled?: boolean
+          organization_id?: string
+          schedules_enabled?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_preferences_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          body: string
+          category: string
+          created_at: string
+          dedupe_key: string | null
+          entity_id: string | null
+          entity_type: string | null
+          expires_at: string | null
+          href: string | null
+          id: string
+          metadata: Json
+          organization_id: string
+          read_at: string | null
+          recipient_user_id: string
+          title: string
+        }
+        Insert: {
+          body: string
+          category: string
+          created_at?: string
+          dedupe_key?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          expires_at?: string | null
+          href?: string | null
+          id?: string
+          metadata?: Json
+          organization_id: string
+          read_at?: string | null
+          recipient_user_id: string
+          title: string
+        }
+        Update: {
+          body?: string
+          category?: string
+          created_at?: string
+          dedupe_key?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          expires_at?: string | null
+          href?: string | null
+          id?: string
+          metadata?: Json
+          organization_id?: string
+          read_at?: string | null
+          recipient_user_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -1206,9 +1355,21 @@ export type Database = {
         }
         Returns: undefined
       }
+      claim_harold_handover: {
+        Args: { target_conversation_id: string; target_membership_id: string }
+        Returns: undefined
+      }
       has_permission: {
         Args: { required_permission: string; target_organization_id: string }
         Returns: boolean
+      }
+      request_harold_handover: {
+        Args: { requested_reason?: string; target_conversation_id: string }
+        Returns: undefined
+      }
+      resolve_harold_handover: {
+        Args: { target_conversation_id: string; target_membership_id: string }
+        Returns: undefined
       }
     }
     Enums: {

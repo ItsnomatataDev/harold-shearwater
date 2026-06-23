@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { Icon, type IconName } from "@/components/Icon";
 import { SignOutButton } from "@/features/auth/components/SignOutButton";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 export interface AdminShellUser {
   name: string;
@@ -74,7 +75,8 @@ export function AdminShell({
         />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col border-r border-[#292927] bg-[#151514] px-4 py-5 transition-transform duration-300 lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
+        data-shell-sidebar
+        className={`fixed inset-y-0 left-0 z-50 flex w-70 flex-col border-r border-[#292927] bg-[#151514] px-4 py-5 transition-transform duration-300 lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
       >
         <div className="flex items-center justify-between px-2">
           <AdminLogo />
@@ -127,8 +129,8 @@ export function AdminShell({
         </div>
       </aside>
 
-      <div className="lg:pl-[280px]">
-        <header className="sticky top-0 z-30 flex h-18 items-center justify-between border-b border-[#292927] bg-[#111]/90 px-5 backdrop-blur-xl sm:px-8 lg:px-10">
+      <div className="shell-content lg:pl-70">
+        <header className="shell-header sticky top-0 z-30 flex h-18 items-center justify-between border-b border-[#292927] bg-[#111]/90 px-5 backdrop-blur-xl sm:px-8 lg:px-10">
           <div className="flex items-center gap-3">
             <button
               aria-label="Open navigation"
@@ -146,6 +148,7 @@ export function AdminShell({
               </p>
             </div>
           </div>
+          <ThemeToggle />
         </header>
 
         <main className="mx-auto max-w-370 px-5 py-7 sm:px-8 lg:px-10 lg:py-9">
