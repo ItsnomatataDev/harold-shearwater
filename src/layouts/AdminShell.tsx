@@ -24,6 +24,8 @@ const adminNavigation: Array<{
   { label: "Attendance Register", href: "/admin/attendance", icon: "clock" },
   { label: "Staff Management", href: "/admin/staff", icon: "crew" },
   { label: "Organization", href: "/admin/organization", icon: "route" },
+  { label: "Products", href: "/admin/products", icon: "package" },
+  { label: "Rate Plans", href: "/admin/products/rates", icon: "dollar" },
 ];
 
 function AdminLogo() {

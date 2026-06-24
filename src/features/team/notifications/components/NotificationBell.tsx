@@ -44,9 +44,13 @@ function timestamp(value: string) {
 }
 
 export function NotificationBell({
+  organizationId,
+  notificationCentrePath,
   initialUnreadCount,
   initialNotifications,
 }: {
+  organizationId: string;
+  notificationCentrePath: string;
   initialUnreadCount: number;
   initialNotifications: NotificationView[];
 }) {
@@ -86,7 +90,7 @@ export function NotificationBell({
       setUnreadCount((count) => Math.max(0, count - 1));
       startTransition(async () => {
         try {
-          await setNotificationRead(notification.id, true);
+          await setNotificationRead(organizationId, notification.id, true);
         } catch {
           setNotifications((current) =>
             current.map((item) =>
@@ -112,7 +116,7 @@ export function NotificationBell({
     setUnreadCount(0);
     startTransition(async () => {
       try {
-        await markAllNotificationsRead();
+        await markAllNotificationsRead(organizationId);
       } catch {
         setNotifications(previousNotifications);
         setUnreadCount(previousUnreadCount);
@@ -215,7 +219,7 @@ export function NotificationBell({
             <button
               onClick={() => {
                 setOpen(false);
-                router.push("/team/notifications");
+                router.push(notificationCentrePath);
               }}
               className="w-full border-t border-[#343431] px-5 py-3 text-center text-[10px] font-semibold text-victoria hover:bg-[#242422]"
             >

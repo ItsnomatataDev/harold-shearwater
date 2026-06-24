@@ -31,6 +31,12 @@ export interface AuthContext {
   avatarUrl: string | null;
   timezone: string;
   memberships: ActiveMembership[];
+  /** The portal the user selected during sign-up (from auth metadata). */
+  intendedPortal: AccessType;
+  /** Agent-specific: name of the agency from profile onboarding. */
+  agencyName: string | null;
+  /** Agent-specific: agency website from profile onboarding. */
+  website: string | null;
 }
 
 export function getAccessHomePath(accessType: AccessType) {
@@ -51,7 +57,9 @@ const getAuthContextCached = cache(async (): Promise<AuthContext | null> => {
     await Promise.all([
       supabase
         .from("profiles")
-        .select("first_name,last_name,email,job_title,phone,avatar_url,timezone")
+        .select(
+          "first_name,last_name,email,job_title,phone,avatar_url,timezone,agency_name,website",
+        )
         .eq("id", user.id)
         .maybeSingle(),
       supabase
@@ -77,6 +85,10 @@ const getAuthContextCached = cache(async (): Promise<AuthContext | null> => {
   const fullName = `${firstName} ${lastName}`.trim();
   const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
 
+  const rawPortal = user.user_metadata?.portal_access as string | undefined;
+  const intendedPortal: AccessType =
+    rawPortal === "team" || rawPortal === "agent" ? rawPortal : "customer";
+
   return {
     userId: user.id,
     email: profile?.email || user.email || "",
@@ -88,6 +100,9 @@ const getAuthContextCached = cache(async (): Promise<AuthContext | null> => {
     phone: profile?.phone || "",
     avatarUrl: profile?.avatar_url ?? null,
     timezone: profile?.timezone || "Africa/Harare",
+    agencyName: profile?.agency_name ?? null,
+    website: profile?.website ?? null,
+    intendedPortal,
     memberships: (memberships ?? []).map((membership) => ({
       id: membership.id,
       accessType: membership.access_type,
@@ -112,6 +127,15 @@ export async function requireTeamContext() {
   if (!context) return null;
   const membership = context.memberships.find(
     (item) => item.accessType === "team",
+  );
+  return membership ? { context, membership } : null;
+}
+
+export async function requireAgentContext() {
+  const context = await getAuthContext();
+  if (!context) return null;
+  const membership = context.memberships.find(
+    (item) => item.accessType === "agent",
   );
   return membership ? { context, membership } : null;
 }
@@ -247,23 +271,32 @@ export async function hasAdminPortalAccess() {
   const isTeamAdmin = await hasTeamAdminAccess(team.membership.id);
   if (isTeamAdmin) return true;
 
-  const [canManageMembers, canManageRoles, canViewAudit, canManageAttendance, canManageOrganization] =
-    await Promise.all([
-      hasOrganizationPermission(
-        team.membership.organizationId,
-        "members.manage",
-      ),
-      hasOrganizationPermission(team.membership.organizationId, "roles.manage"),
-      hasOrganizationPermission(team.membership.organizationId, "audit.view"),
-      hasOrganizationPermission(
-        team.membership.organizationId,
-        "attendance.manage",
-      ),
-      hasOrganizationPermission(team.membership.organizationId, "organization.manage"),
-    ]);
+  const [
+    canManageMembers,
+    canManageRoles,
+    canViewAudit,
+    canManageAttendance,
+    canManageOrganization,
+  ] = await Promise.all([
+    hasOrganizationPermission(team.membership.organizationId, "members.manage"),
+    hasOrganizationPermission(team.membership.organizationId, "roles.manage"),
+    hasOrganizationPermission(team.membership.organizationId, "audit.view"),
+    hasOrganizationPermission(
+      team.membership.organizationId,
+      "attendance.manage",
+    ),
+    hasOrganizationPermission(
+      team.membership.organizationId,
+      "organization.manage",
+    ),
+  ]);
 
   return (
-    canManageMembers || canManageRoles || canViewAudit || canManageAttendance || canManageOrganization
+    canManageMembers ||
+    canManageRoles ||
+    canViewAudit ||
+    canManageAttendance ||
+    canManageOrganization
   );
 }
 

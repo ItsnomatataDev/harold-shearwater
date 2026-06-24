@@ -23,7 +23,7 @@ export async function sendToHaroldWebhook(input: {
   conversationId: string;
   organizationId: string;
   organizationName: string | null;
-  user: { id: string; name: string; access: "team" };
+  user: { id: string; name: string; access: "team" | "agent" };
   message: { id: string; content: string; createdAt: string };
   history: WebhookMessage[];
 }): Promise<HaroldWebhookResult> {
@@ -34,7 +34,7 @@ export async function sendToHaroldWebhook(input: {
     body: JSON.stringify({
       event: "harold.message",
       version: "1.0",
-      source: "team_access",
+      source: `${input.user.access}_access`,
       conversationId: input.conversationId,
       organization: {
         id: input.organizationId,

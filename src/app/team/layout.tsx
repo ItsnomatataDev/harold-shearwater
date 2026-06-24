@@ -12,7 +12,10 @@ export default async function TeamLayout({
   const team = await requireAccessContext("team");
   if (!team) redirect("/auth/continue");
   if (!team.membership.organizationId) redirect("/auth/continue");
-  const notificationSummary = await getNotificationSummary(team.membership.organizationId);
+  const notificationSummary = await getNotificationSummary(
+    team.membership.organizationId,
+    team.context.userId,
+  );
 
   return (
     <AppShell

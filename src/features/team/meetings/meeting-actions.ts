@@ -18,7 +18,7 @@ export async function createMeeting(organizationId: string, input: unknown) {
   const memberships = await supabase.from("access_memberships").select("user_id").eq("organization_id", organizationId).eq("access_type", "team").eq("status", "active").in("user_id", attendeeIds);
   if (memberships.error) throw new Error(memberships.error.message);
   if ((memberships.data ?? []).length !== attendeeIds.length) throw new Error("One or more attendees are not active staff members.");
-  const { data: meeting, error } = await supabase.from("meetings").insert({ organization_id: organizationId, title: parsed.title, description: parsed.description || null, starts_at: parsed.startsAt, ends_at: parsed.endsAt || null, location: parsed.location || null, created_by: team.context.userId }).select("id").single();
+  const { data: meeting, error } = await supabase.from("meetings").insert({ organization_id: organizationId, title: parsed.title, description: parsed.description || null, starts_at: parsed.startsAt, scheduled_at: parsed.startsAt, ends_at: parsed.endsAt || null, ended_at: parsed.endsAt || null, location: parsed.location || null, location_notes: parsed.location || null, created_by: team.context.userId }).select("id").single();
   if (error) throw new Error(error.message);
   const attendeeResult = await supabase.from("meeting_attendees").insert(attendeeIds.map((userId) => ({ meeting_id: meeting.id, user_id: userId, response: userId === team.context.userId ? "accepted" as const : "needs_action" as const })));
   if (attendeeResult.error) throw new Error(attendeeResult.error.message);

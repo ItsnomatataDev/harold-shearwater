@@ -35,6 +35,9 @@ const baseNavigation: {
     icon: "communication",
   },
   { label: "Notifications", href: "/team/notifications", icon: "bell" },
+  { label: "CRM", href: "/team/crm", icon: "users" },
+  { label: "Deals", href: "/team/crm/deals", icon: "deals" },
+  { label: "Announcements", href: "/team/announcements", icon: "megaphone" },
   { label: "Knowledge Base", href: "/team/knowledge", icon: "knowledge" },
   { label: "Harold", href: "/team/harold", icon: "harold" },
   { label: "Reports", href: "/team/insights", icon: "insights" },
@@ -184,6 +187,8 @@ export function AppShell({
           <div className="flex items-center gap-2">
             <ThemeToggle />
             <NotificationBell
+              organizationId={notificationScope.organizationId}
+              notificationCentrePath="/team/notifications"
               key={`${notifications.unreadCount}:${notifications.recent
                 .map((item) => `${item.id}:${item.readAt ?? "unread"}`)
                 .join(",")}`}

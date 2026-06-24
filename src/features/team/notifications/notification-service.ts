@@ -42,22 +42,22 @@ function mapNotification(item: { id: string; category: string; title: string; bo
   return { id: item.id, category: item.category as NotificationCategory, title: item.title, body: item.body, href: item.href, entityType: item.entity_type, entityId: item.entity_id, readAt: item.read_at, createdAt: item.created_at };
 }
 
-export async function getNotificationSummary(organizationId: string) {
+export async function getNotificationSummary(organizationId: string, userId: string) {
   const supabase = await createClient();
   const [unreadResult, recentResult] = await Promise.all([
-    supabase.from("notifications").select("id", { count: "exact", head: true }).eq("organization_id", organizationId).is("read_at", null),
-    supabase.from("notifications").select("id,category,title,body,href,entity_type,entity_id,read_at,created_at").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(6),
+    supabase.from("notifications").select("id", { count: "exact", head: true }).eq("organization_id", organizationId).eq("recipient_user_id", userId).is("read_at", null),
+    supabase.from("notifications").select("id,category,title,body,href,entity_type,entity_id,read_at,created_at").eq("organization_id", organizationId).eq("recipient_user_id", userId).order("created_at", { ascending: false }).limit(6),
   ]);
   if (unreadResult.error) throw new Error(unreadResult.error.message);
   if (recentResult.error) throw new Error(recentResult.error.message);
   return { unreadCount: unreadResult.count ?? 0, recent: (recentResult.data ?? []).map(mapNotification) };
 }
 
-export async function getNotificationCentreData(organizationId: string) {
+export async function getNotificationCentreData(organizationId: string, userId: string) {
   const supabase = await createClient();
   const [notificationsResult, preferencesResult] = await Promise.all([
-    supabase.from("notifications").select("id,category,title,body,href,entity_type,entity_id,read_at,created_at").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(200),
-    supabase.from("notification_preferences").select("in_app_enabled,email_enabled,meetings_enabled,schedules_enabled,announcements_enabled,knowledge_enabled,access_enabled,attendance_enabled").eq("organization_id", organizationId).maybeSingle(),
+    supabase.from("notifications").select("id,category,title,body,href,entity_type,entity_id,read_at,created_at").eq("organization_id", organizationId).eq("recipient_user_id", userId).order("created_at", { ascending: false }).limit(200),
+    supabase.from("notification_preferences").select("in_app_enabled,email_enabled,meetings_enabled,schedules_enabled,announcements_enabled,knowledge_enabled,access_enabled,attendance_enabled").eq("organization_id", organizationId).eq("user_id", userId).maybeSingle(),
   ]);
   if (notificationsResult.error) throw new Error(notificationsResult.error.message);
   if (preferencesResult.error) throw new Error(preferencesResult.error.message);

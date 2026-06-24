@@ -29,10 +29,10 @@ function mapNotification(row: NotificationRow): NotificationView {
 function NotificationToast({ notification }: { notification: NotificationView }) {
   return (
     <div className="min-w-0 pr-2">
-      <p className="text-xs font-semibold text-[var(--text-primary)]">
+      <p className="text-xs font-semibold text-(--text-primary)">
         {notification.title}
       </p>
-      <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-[var(--text-secondary)]">
+      <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-(--text-secondary)">
         {notification.body}
       </p>
       {notification.href && (
@@ -57,7 +57,7 @@ export function RealtimeNotificationListener({
   useEffect(() => {
     const supabase = createClient();
     const channel = supabase
-      .channel(`team-notifications:${userId}`)
+      .channel(`notifications:${organizationId}:${userId}`)
       .on(
         "postgres_changes",
         {

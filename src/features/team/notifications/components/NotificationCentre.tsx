@@ -108,9 +108,13 @@ function Toggle({
 }
 
 export function NotificationCentre({
+  organizationId,
+  portalName,
   initialNotifications,
   initialPreferences,
 }: {
+  organizationId: string;
+  portalName: "Team Access" | "Agent Access";
   initialNotifications: NotificationView[];
   initialPreferences: NotificationPreferences;
 }) {
@@ -178,7 +182,7 @@ export function NotificationCentre({
       current.map((item) => (item.id === notification.id ? { ...item, readAt } : item)),
     );
     runAction(
-      () => setNotificationRead(notification.id, read),
+      () => setNotificationRead(organizationId, notification.id, read),
       undefined,
       () =>
         setNotifications((current) =>
@@ -203,7 +207,7 @@ export function NotificationCentre({
       current.map((item) => ({ ...item, readAt: item.readAt ?? readAt })),
     );
     runAction(
-      markAllNotificationsRead,
+      () => markAllNotificationsRead(organizationId),
       "All notifications marked as read.",
       () =>
         setNotifications((current) =>
@@ -218,7 +222,7 @@ export function NotificationCentre({
   function removeNotification(notification: NotificationView) {
     setNotifications((current) => current.filter((item) => item.id !== notification.id));
     runAction(
-      () => deleteNotification(notification.id),
+      () => deleteNotification(organizationId, notification.id),
       "Notification removed.",
       () =>
         setNotifications((current) =>
@@ -232,7 +236,7 @@ export function NotificationCentre({
 
   function savePreferences() {
     runAction(async () => {
-      await updateNotificationPreferences(preferences);
+      await updateNotificationPreferences(organizationId, preferences);
       setSavedPreferences(preferences);
     }, "Notification preferences saved.");
   }
@@ -371,7 +375,9 @@ export function NotificationCentre({
               <p className="mx-auto mt-2 max-w-sm text-xs leading-5 text-[#777771]">
                 {notifications.length
                   ? "Change the status or category filter to see more operational updates."
-                  : "Meeting invitations, schedule changes and published company updates will appear here automatically."}
+                  : portalName === "Agent Access"
+                    ? "Enquiry updates, inbox messages, rate assignments and account activity will appear here automatically."
+                    : "Meeting invitations, schedule changes and published company updates will appear here automatically."}
               </p>
             </div>
           )}
@@ -395,7 +401,7 @@ export function NotificationCentre({
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-xs font-semibold text-[#d9d9d3]">In-app notifications</p>
-              <p className="mt-1 text-[10px] text-[#74746e]">Show alerts inside Team Access</p>
+              <p className="mt-1 text-[10px] text-[#74746e]">Show alerts inside {portalName}</p>
             </div>
             <Toggle
               label="In-app notifications"

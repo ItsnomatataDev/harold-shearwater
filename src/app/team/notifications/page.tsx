@@ -11,7 +11,10 @@ export default async function NotificationsPage() {
   const team = await requireTeamContext();
   if (!team?.membership.organizationId) redirect("/auth/continue");
 
-  const data = await getNotificationCentreData(team.membership.organizationId);
+  const data = await getNotificationCentreData(
+    team.membership.organizationId,
+    team.context.userId,
+  );
 
   return (
     <section className="space-y-6">
@@ -21,6 +24,8 @@ export default async function NotificationsPage() {
         description="Keep track of meeting invitations, schedule changes, announcements, knowledge updates and access activity across your Shearwater workspace."
       />
       <NotificationCentre
+        organizationId={team.membership.organizationId}
+        portalName="Team Access"
         initialNotifications={data.notifications}
         initialPreferences={data.preferences}
       />
