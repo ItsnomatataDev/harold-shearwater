@@ -35,6 +35,8 @@ const baseNavigation: {
     icon: "communication",
   },
   { label: "Notifications", href: "/team/notifications", icon: "bell" },
+  { label: "Document Inbox", href: "/team/inbox", icon: "mail" },
+  { label: "Chat", href: "/team/chat", icon: "communication" },
   { label: "CRM", href: "/team/crm", icon: "users" },
   { label: "Deals", href: "/team/crm/deals", icon: "deals" },
   { label: "Announcements", href: "/team/announcements", icon: "megaphone" },

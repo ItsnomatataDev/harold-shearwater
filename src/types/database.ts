@@ -14,24 +14,6 @@ export type Database = {
   };
   graphql_public: {
     Tables: {
-      chat_conversations: {
-        Row: { id: string; organization_id: string; title: string; created_by: string; created_at: string; updated_at: string };
-        Insert: { id?: string; organization_id: string; title: string; created_by: string; created_at?: string; updated_at?: string };
-        Update: { id?: string; organization_id?: string; title?: string; created_by?: string; created_at?: string; updated_at?: string };
-        Relationships: [];
-      };
-      chat_messages: {
-        Row: { id: string; conversation_id: string; sender_user_id: string; sender_access: Database["public"]["Enums"]["access_type"]; body: string; created_at: string };
-        Insert: { id?: string; conversation_id: string; sender_user_id: string; sender_access: Database["public"]["Enums"]["access_type"]; body: string; created_at?: string };
-        Update: { id?: string; conversation_id?: string; sender_user_id?: string; sender_access?: Database["public"]["Enums"]["access_type"]; body?: string; created_at?: string };
-        Relationships: [];
-      };
-      chat_participants: {
-        Row: { conversation_id: string; user_id: string; access_type: Database["public"]["Enums"]["access_type"]; membership_id: string | null; last_read_at: string | null; joined_at: string };
-        Insert: { conversation_id: string; user_id: string; access_type: Database["public"]["Enums"]["access_type"]; membership_id?: string | null; last_read_at?: string | null; joined_at?: string };
-        Update: { conversation_id?: string; user_id?: string; access_type?: Database["public"]["Enums"]["access_type"]; membership_id?: string | null; last_read_at?: string | null; joined_at?: string };
-        Relationships: [];
-      };
       [_ in never]: never;
     };
     Views: {
@@ -57,6 +39,24 @@ export type Database = {
   };
   public: {
     Tables: {
+      chat_conversations: {
+        Row: { id: string; organization_id: string; title: string; created_by: string; conversation_type: "direct" | "group"; direct_key: string | null; source_harold_id: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; organization_id: string; title: string; created_by: string; conversation_type?: "direct" | "group"; direct_key?: string | null; source_harold_id?: string | null; created_at?: string; updated_at?: string };
+        Update: { id?: string; organization_id?: string; title?: string; created_by?: string; conversation_type?: "direct" | "group"; direct_key?: string | null; source_harold_id?: string | null; created_at?: string; updated_at?: string };
+        Relationships: [];
+      };
+      chat_messages: {
+        Row: { id: string; conversation_id: string; sender_user_id: string; sender_access: Database["public"]["Enums"]["access_type"]; body: string; created_at: string };
+        Insert: { id?: string; conversation_id: string; sender_user_id: string; sender_access: Database["public"]["Enums"]["access_type"]; body: string; created_at?: string };
+        Update: { id?: string; conversation_id?: string; sender_user_id?: string; sender_access?: Database["public"]["Enums"]["access_type"]; body?: string; created_at?: string };
+        Relationships: [];
+      };
+      chat_participants: {
+        Row: { conversation_id: string; user_id: string; access_type: Database["public"]["Enums"]["access_type"]; membership_id: string | null; last_read_at: string | null; joined_at: string };
+        Insert: { conversation_id: string; user_id: string; access_type: Database["public"]["Enums"]["access_type"]; membership_id?: string | null; last_read_at?: string | null; joined_at?: string };
+        Update: { conversation_id?: string; user_id?: string; access_type?: Database["public"]["Enums"]["access_type"]; membership_id?: string | null; last_read_at?: string | null; joined_at?: string };
+        Relationships: [];
+      };
       access_memberships: {
         Row: {
           access_type: Database["public"]["Enums"]["access_type"];
@@ -491,6 +491,7 @@ export type Database = {
       harold_conversations: {
         Row: {
           assigned_to_membership_id: string | null;
+          chat_conversation_id: string | null;
           created_at: string;
           handover_reason: string | null;
           handover_requested_at: string | null;
@@ -507,6 +508,7 @@ export type Database = {
         };
         Insert: {
           assigned_to_membership_id?: string | null;
+          chat_conversation_id?: string | null;
           created_at?: string;
           handover_reason?: string | null;
           handover_requested_at?: string | null;
@@ -523,6 +525,7 @@ export type Database = {
         };
         Update: {
           assigned_to_membership_id?: string | null;
+          chat_conversation_id?: string | null;
           created_at?: string;
           handover_reason?: string | null;
           handover_requested_at?: string | null;
@@ -2426,6 +2429,10 @@ export type Database = {
       resolve_harold_handover: {
         Args: { target_conversation_id: string; target_membership_id: string };
         Returns: undefined;
+      };
+      start_direct_chat: {
+        Args: { target_membership_id: string };
+        Returns: string;
       };
     };
     Enums: {

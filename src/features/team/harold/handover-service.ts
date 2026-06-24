@@ -19,6 +19,7 @@ export interface HandoverConversation {
   assignedToMembershipId: string | null;
   assignedToName: string | null;
   resolvedAt: string | null;
+  chatConversationId: string | null;
   updatedAt: string;
   messages: HaroldMessage[];
 }
@@ -30,7 +31,7 @@ export async function getHandoverQueue(
   const { data: conversations, error } = await supabase
     .from("harold_conversations")
     .select(
-      "id,title,status,user_id,source_access,handover_reason,handover_requested_at,assigned_to_membership_id,resolved_at,updated_at",
+      "id,title,status,user_id,source_access,handover_reason,handover_requested_at,assigned_to_membership_id,resolved_at,chat_conversation_id,updated_at",
     )
     .eq("organization_id", organizationId)
     .neq("status", "ai_active")
@@ -133,6 +134,7 @@ export async function getHandoverQueue(
         ? staffNameMap.get(assignedUserId) ?? "Shearwater Team"
         : null,
       resolvedAt: conversation.resolved_at,
+      chatConversationId: conversation.chat_conversation_id,
       updatedAt: conversation.updated_at,
       messages: (messages.data ?? [])
         .filter((message) => message.conversation_id === conversation.id)

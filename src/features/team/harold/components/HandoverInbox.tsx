@@ -2,10 +2,11 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Icon } from "@/components/Icon";
 import { createClient } from "@/lib/supabase/client";
 import type { HandoverConversation } from "../handover-service";
-import { claimHandover, resolveHandover, sendHumanReply } from "../handover-actions";
+import { claimHandover, resolveHandover } from "../handover-actions";
 
 const formatTime = (value: string) =>
   new Intl.DateTimeFormat("en-GB", {
@@ -33,7 +34,6 @@ export function HandoverInbox({
       : conversation.status !== "resolved",
   );
   const [selectedId, setSelectedId] = useState(visible[0]?.id ?? "");
-  const [reply, setReply] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const selected =
@@ -185,19 +185,10 @@ export function HandoverInbox({
                 )}
                 {selected.status === "human_active" &&
                   selected.assignedToMembershipId === currentMembershipId && (
-                    <button
-                      disabled={pending}
-                      onClick={() =>
-                        run(() =>
-                          resolveHandover(organizationId, {
-                            conversationId: selected.id,
-                          }),
-                        )
-                      }
-                      className="rounded-xl border border-[#444] px-4 py-2.5 text-xs font-semibold text-[#bbb] disabled:opacity-50"
-                    >
-                      Resolve
-                    </button>
+                    <>
+                      {selected.chatConversationId && <Link href={`/team/chat?conversation=${selected.chatConversationId}`} className="rounded-xl bg-savannah px-4 py-2.5 text-xs font-semibold text-[#102018]">Continue in Chat</Link>}
+                      <button disabled={pending} onClick={() => run(() => resolveHandover(organizationId, { conversationId: selected.id }))} className="rounded-xl border border-[#444] px-4 py-2.5 text-xs font-semibold text-[#bbb] disabled:opacity-50">Resolve</button>
+                    </>
                   )}
               </div>
             </header>
@@ -238,38 +229,9 @@ export function HandoverInbox({
               )}
             </div>
 
-            {selected.status === "human_active" &&
-              selected.assignedToMembershipId === currentMembershipId && (
-                <form
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    const message = reply.trim();
-                    if (!message) return;
-                    run(
-                      () =>
-                        sendHumanReply(organizationId, {
-                          conversationId: selected.id,
-                          message,
-                        }),
-                      () => setReply(""),
-                    );
-                  }}
-                  className="flex gap-2 border-t border-[#343431] p-4"
-                >
-                  <input
-                    value={reply}
-                    onChange={(event) => setReply(event.target.value)}
-                    placeholder={`Reply to ${selected.requesterName}…`}
-                    className="input flex-1"
-                  />
-                  <button
-                    disabled={pending || !reply.trim()}
-                    className="rounded-xl bg-savannah px-4 text-[#102018] disabled:opacity-50"
-                  >
-                    <Icon name="send" className="h-4 w-4" />
-                  </button>
-                </form>
-              )}
+            {selected.status === "human_active" && selected.assignedToMembershipId === currentMembershipId && (
+              <div className="border-t border-[#343431] px-5 py-4 text-xs text-[#888]">Human replies continue in Chat so this AI handoff remains an audit record.</div>
+            )}
 
             {selected.status === "human_active" &&
               selected.assignedToMembershipId !== currentMembershipId && (

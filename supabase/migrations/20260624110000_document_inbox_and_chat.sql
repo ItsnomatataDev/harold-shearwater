@@ -1,4 +1,4 @@
--- Keep document delivery and human chat as separate products.
+drop trigger if exists agent_inbox_message_notification on public.inbox_messages;
 
 insert into storage.buckets (id, name, public, file_size_limit)
 values ('document-inbox', 'document-inbox', false, 26214400)
@@ -147,6 +147,17 @@ $$;
 revoke all on function private.is_chat_participant(uuid) from public;
 grant execute on function private.is_chat_participant(uuid) to authenticated;
 
+create or replace function private.can_manage_chat(target_conversation_id uuid)
+returns boolean language sql stable security definer set search_path = '' as $$
+  select exists (
+    select 1 from public.chat_conversations conversation
+    where conversation.id = target_conversation_id
+      and private.is_team_member(conversation.organization_id)
+  );
+$$;
+revoke all on function private.can_manage_chat(uuid) from public;
+grant execute on function private.can_manage_chat(uuid) to authenticated;
+
 create policy chat_conversations_select on public.chat_conversations
   for select to authenticated using (private.is_chat_participant(id));
 create policy chat_conversations_insert_team on public.chat_conversations
@@ -159,11 +170,7 @@ create policy chat_participants_select on public.chat_participants
   for select to authenticated using (private.is_chat_participant(conversation_id));
 create policy chat_participants_insert_team on public.chat_participants
   for insert to authenticated
-  with check (exists (
-    select 1 from public.chat_conversations conversation
-    where conversation.id = conversation_id
-      and private.is_team_member(conversation.organization_id)
-  ));
+  with check (private.can_manage_chat(conversation_id));
 create policy chat_participants_update_self on public.chat_participants
   for update to authenticated
   using (user_id = (select auth.uid()))

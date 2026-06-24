@@ -24,7 +24,8 @@ const agentNavigation: { label: string; href: string; icon: IconName }[] = [
   { label: "Products", href: "/agent/products", icon: "package" },
   { label: "Search", href: "/agent/search", icon: "search" },
   { label: "Harold", href: "/agent/harold", icon: "harold" },
-  { label: "Inbox", href: "/agent/inbox", icon: "mail" },
+  { label: "Documents", href: "/agent/inbox", icon: "mail" },
+  { label: "Chat", href: "/agent/chat", icon: "communication" },
   { label: "Notifications", href: "/agent/notifications", icon: "bell" },
   { label: "Settings", href: "/agent/settings", icon: "settings" },
 ];
