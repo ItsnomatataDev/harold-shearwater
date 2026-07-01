@@ -156,6 +156,7 @@ export function ProductBookingPanel({
   const isGoldenDuskProduct = isGoldenDuskBookableProduct(product);
   const canQuoteGoldenDusk =
     audience === "agent" && isGoldenDuskProduct && Boolean(organizationId);
+  const liveBookingMode = canQuoteGoldenDusk && goldenDuskConnected;
   const availabilityUnits = getProductAvailabilityUnits(product);
   const isRoomType = isRoomTypeProduct(product);
   const [pending, startTransition] = useTransition();
@@ -237,7 +238,11 @@ export function ProductBookingPanel({
     if (response.ok) {
       setQuote(response);
     } else {
-      setError(response.error);
+      setError(
+        "notConnected" in response && response.notConnected
+          ? "Your SWAIBMS session expired. Sign in again as a travel agent, or reconnect in Settings."
+          : response.error,
+      );
     }
   }
 
@@ -264,7 +269,11 @@ export function ProductBookingPanel({
         enquiryId: response.enquiryId,
       });
     } else {
-      setError(response.error);
+      setError(
+        "notConnected" in response && response.notConnected
+          ? "Your SWAIBMS session expired. Sign in again as a travel agent, or reconnect in Settings."
+          : response.error,
+      );
     }
   }
 
@@ -324,7 +333,8 @@ export function ProductBookingPanel({
         </div>
         <p className="mt-2 text-sm leading-6 text-[#e8dcc0]">
           Booking #{confirmed.bookingId} is live in SWAIBMS. Harold mirrored it
-          to enquiry {confirmed.reference} and notified the Shearwater team.
+          to enquiry {confirmed.reference} and the Shearwater team has been
+          notified.
         </p>
         <dl className="mt-4 grid grid-cols-2 gap-3 text-xs">
           <div>
@@ -536,15 +546,33 @@ export function ProductBookingPanel({
       {canQuoteGoldenDusk && (
         <div className="space-y-3">
           {!goldenDuskConnected ? (
-            <div className="rounded-xl border border-gold/30 bg-gold/10 px-4 py-3 text-xs text-[#e8dcc0]">
-              Connect your GoldenDusk agent account in{" "}
-              <Link href="/agent/settings" className="font-semibold text-gold hover:underline">
-                Settings
-              </Link>{" "}
-              to quote and confirm bookings directly in SWAIBMS.
+            <div className="rounded-xl border border-gold/30 bg-gold/10 px-4 py-3 text-xs leading-5 text-[#e8dcc0]">
+              <p className="font-semibold text-gold">SWAIBMS booking unavailable</p>
+              <p className="mt-1">
+                Sign in again as a{" "}
+                <Link href="/auth" className="font-semibold text-gold hover:underline">
+                  travel agent
+                </Link>{" "}
+                to quote and confirm live bookings. If you are already signed in,
+                reconnect in{" "}
+                <Link href="/agent/settings" className="font-semibold text-gold hover:underline">
+                  Settings
+                </Link>
+                .
+              </p>
             </div>
           ) : (
-            <>
+            <div className="space-y-3 rounded-2xl border border-gold/30 bg-gold/5 p-4">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[.16em] text-gold">
+                  Book in SWAIBMS
+                </p>
+                <p className="mt-1 text-xs leading-5 text-[#c8c0a8]">
+                  Quote live price and availability, then confirm directly in
+                  GoldenDusk. Harold mirrors the booking to your enquiries and
+                  notifies the Shearwater team.
+                </p>
+              </div>
               <button
                 type="button"
                 disabled={!preferredDate || quoting || !contactName.trim()}
@@ -581,11 +609,11 @@ export function ProductBookingPanel({
                   >
                     {confirming
                       ? "Confirming in GoldenDusk…"
-                      : "Confirm booking in GoldenDusk"}
+                      : "Confirm booking in SWAIBMS"}
                   </button>
                 </div>
               )}
-            </>
+            </div>
           )}
         </div>
       )}
@@ -615,22 +643,59 @@ export function ProductBookingPanel({
       {error && (
         <div className="flex items-start gap-2 rounded-xl border border-red-700/40 bg-red-900/15 px-3 py-2 text-xs text-red-200">
           <Icon name="alertCircle" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          {error}
+          <div>
+            <p>{error}</p>
+            {error.includes("SWAIBMS session expired") ? (
+              <p className="mt-2">
+                <Link href="/auth" className="font-semibold text-red-100 hover:underline">
+                  Sign in again
+                </Link>
+                {" · "}
+                <Link
+                  href="/agent/settings"
+                  className="font-semibold text-red-100 hover:underline"
+                >
+                  Settings
+                </Link>
+              </p>
+            ) : null}
+          </div>
         </div>
       )}
 
-      <button
-        type="submit"
-        disabled={pending || confirming}
-        className="btn-primary w-full disabled:opacity-50"
-      >
-        {pending ? "Sending request…" : "Request Shearwater follow-up"}
-      </button>
-      <p className="text-center text-[11px] leading-4 text-[#77776f]">
-        {canQuoteGoldenDusk && goldenDuskConnected
-          ? "Use GoldenDusk confirm for live SWAIBMS bookings, or send a Harold request for team follow-up."
-          : "This sends a request only. Confirmation and payment follow once Shearwater processes your booking."}
-      </p>
+      {liveBookingMode ? (
+        <details className="rounded-xl border border-[#2f2f2b] bg-[#141412] px-4 py-3">
+          <summary className="cursor-pointer text-xs font-medium text-[#9b9b94] hover:text-white">
+            Need Shearwater team follow-up instead?
+          </summary>
+          <p className="mt-3 text-xs leading-5 text-[#77776f]">
+            Send an enquiry without confirming in SWAIBMS. Use this when you need
+            manual assistance, a custom quote, or the product cannot be booked
+            live.
+          </p>
+          <button
+            type="submit"
+            disabled={pending || confirming}
+            className="btn-ghost mt-4 w-full text-xs disabled:opacity-50"
+          >
+            {pending ? "Sending request…" : "Send enquiry to Shearwater"}
+          </button>
+        </details>
+      ) : (
+        <>
+          <button
+            type="submit"
+            disabled={pending || confirming}
+            className="btn-primary w-full disabled:opacity-50"
+          >
+            {pending ? "Sending request…" : "Request Shearwater follow-up"}
+          </button>
+          <p className="text-center text-[11px] leading-4 text-[#77776f]">
+            This sends a request only. Confirmation and payment follow once
+            Shearwater processes your booking.
+          </p>
+        </>
+      )}
     </form>
   );
 }

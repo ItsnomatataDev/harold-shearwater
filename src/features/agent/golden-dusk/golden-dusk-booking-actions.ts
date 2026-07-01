@@ -17,6 +17,7 @@ import {
   mirrorGoldenDuskBookingToEnquiry,
   syncGoldenDuskBookingMirror,
 } from "@/features/integrations/golden-dusk/agent-booking-mirror";
+import { notifyTeamOfGoldenDuskBookingConfirmed } from "@/features/integrations/golden-dusk/golden-dusk-booking-notifications";
 import type { GoldenDuskFinancialDocumentType } from "@/features/integrations/golden-dusk/agent-booking-types";
 import { parseGoldenDuskProductId } from "@/features/integrations/golden-dusk/product-external-id";
 import {
@@ -53,11 +54,21 @@ function mapGoldenDuskError(error: unknown, fallback: string) {
   if (error instanceof GoldenDuskApiError) {
     const notConnected = error.message
       .toLowerCase()
-      .includes("connect your golden dusk");
+      .includes("connect your golden dusk")
+      || error.message.toLowerCase().includes("swaibms session expired");
+    if (error.status === 429) {
+      return {
+        ok: false as const,
+        error:
+          "The booking system is busy right now. Wait a minute and use Refresh, or try again shortly.",
+        notConnected,
+      };
+    }
     return { ok: false as const, error: error.message, notConnected };
   }
   const message = error instanceof Error ? error.message : fallback;
-  const notConnected = message.toLowerCase().includes("connect your golden dusk");
+  const notConnected = message.toLowerCase().includes("connect your golden dusk")
+    || message.toLowerCase().includes("swaibms session expired");
   return { ok: false as const, error: message, notConnected };
 }
 
@@ -136,9 +147,26 @@ export async function confirmGoldenDuskProductBooking(
       reservation,
     });
 
+    await notifyTeamOfGoldenDuskBookingConfirmed({
+      organizationId,
+      agentUserId: agent.context.userId,
+      agentName: agent.context.fullName,
+      enquiryId: mirrored.enquiryId,
+      reference: mirrored.reference ?? `SWAIBMS-${reservation.id}`,
+      contactName: parsed.data.contactName,
+      productInterest: product.name,
+      bookingId: reservation.id,
+      requestedDate: parsed.data.preferredDate,
+      totalAmount: reservation.totalAmount ?? null,
+      currencyCode: reservation.currency?.code ?? null,
+    }).catch(() => {});
+
     revalidatePath("/agent/enquiries");
+    revalidatePath(`/agent/enquiries/${mirrored.enquiryId}`);
     revalidatePath("/agent/bookings");
     revalidatePath("/team/bookings");
+    revalidatePath(`/team/bookings/enquiries/${mirrored.enquiryId}`);
+    revalidatePath("/team/notifications");
 
     return {
       ok: true as const,
@@ -257,18 +285,31 @@ export async function checkGoldenDuskProductAvailability(
   }
 }
 
-export async function loadAgentGoldenDuskBookings(organizationId: string) {
+export async function loadAgentGoldenDuskBookings(
+  organizationId: string,
+  options?: { refresh?: boolean },
+) {
   const agent = await requireAgentContext();
   if (!agent || agent.membership.organizationId !== organizationId) {
     return { ok: false as const, error: "Agent access is required." };
   }
 
   try {
-    const bookings = await listGoldenDuskBookings(agent.membership.id);
+    const bookings = await listGoldenDuskBookings(agent.membership.id, options);
     return { ok: true as const, bookings };
   } catch (error) {
     return mapGoldenDuskError(error, "Unable to load GoldenDusk bookings.");
   }
+}
+
+export async function refreshAgentGoldenDuskBookings(organizationId: string) {
+  const result = await loadAgentGoldenDuskBookings(organizationId, {
+    refresh: true,
+  });
+  if (result.ok) {
+    revalidatePath("/agent/bookings");
+  }
+  return result;
 }
 
 export async function refreshGoldenDuskEnquiryMirror(

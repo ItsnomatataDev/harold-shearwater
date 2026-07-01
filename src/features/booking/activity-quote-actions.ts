@@ -83,9 +83,10 @@ export async function quoteAgentActivityBooking(
     };
   } catch (error) {
     if (error instanceof GoldenDuskApiError) {
-      const notConnected = error.message
-        .toLowerCase()
-        .includes("connect your golden dusk");
+    const notConnected = error.message
+      .toLowerCase()
+      .includes("connect your golden dusk")
+      || error.message.toLowerCase().includes("swaibms session expired");
       return {
         ok: false,
         error: error.message,
@@ -96,7 +97,8 @@ export async function quoteAgentActivityBooking(
       error instanceof Error ? error.message : "Unable to quote this activity.";
     const notConnected = message
       .toLowerCase()
-      .includes("connect your golden dusk");
+      .includes("connect your golden dusk")
+      || message.toLowerCase().includes("swaibms session expired");
     return { ok: false, error: message, notConnected };
   }
 }

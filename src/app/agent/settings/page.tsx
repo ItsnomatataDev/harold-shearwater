@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { requireAgentContext } from "@/features/auth/services/auth-context";
 import { AgentSettingsForm } from "@/features/agent/settings/AgentSettingsForm";
 import { GoldenDuskConnectPanel } from "@/features/agent/golden-dusk/GoldenDuskConnectPanel";
-import { getGoldenDuskConnectionSummary } from "@/features/integrations/golden-dusk/agent-auth-service";
+import { getAgentSettingsPageData } from "@/features/agent/profile/agent-display-profile";
 
 export const metadata: Metadata = { title: "Settings — Agent" };
 
@@ -11,9 +11,9 @@ export default async function AgentSettingsPage() {
   const agent = await requireAgentContext();
   if (!agent?.membership.organizationId) redirect("/auth/continue");
 
-  const goldenDuskConnection = await getGoldenDuskConnectionSummary(
+  const { goldenDusk, connection, defaults } = await getAgentSettingsPageData(
+    agent.context,
     agent.membership.id,
-    { includeLiveProfile: true },
   );
 
   return (
@@ -26,20 +26,16 @@ export default async function AgentSettingsPage() {
           Agency Settings
         </h1>
         <p className="mt-1 text-sm text-[#666]">
-          Manage your agency profile and account details.
+          Your booking identity comes from SWAIBMS. You can add portal contact
+          details here for Shearwater.
         </p>
       </header>
-      <GoldenDuskConnectPanel connection={goldenDuskConnection} />
       <AgentSettingsForm
         userId={agent.context.userId}
-        defaults={{
-          firstName: agent.context.firstName,
-          lastName: agent.context.lastName,
-          phone: agent.context.phone,
-          agencyName: agent.context.agencyName ?? "",
-          website: agent.context.website ?? "",
-        }}
+        defaults={defaults}
+        goldenDusk={goldenDusk}
       />
+      <GoldenDuskConnectPanel connection={connection} />
     </div>
   );
 }

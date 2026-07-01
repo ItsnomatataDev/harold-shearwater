@@ -93,6 +93,7 @@ export async function syncGoldenDuskConnectionProfile(membershipId: string) {
   await admin
     .from("golden_dusk_agent_connections")
     .update({
+      agent_full_name: profile.fullName,
       agency_name: profile.agencyName,
       consultant_name: profile.consultantName,
       golden_dusk_agency_id: profile.agencyId,
@@ -193,6 +194,9 @@ export async function saveGoldenDuskAgentConnection(input: {
     golden_dusk_agency_id: input.auth.agencyId,
     golden_dusk_consultant_id: input.auth.consultantId,
     connected_email: input.auth.email ?? "",
+    agent_full_name:
+      [input.auth.firstName, input.auth.lastName].filter(Boolean).join(" ").trim() ||
+      null,
     access_token: input.auth.jwtToken,
     refresh_token: input.refreshToken ?? null,
     token_expires_at: computeTokenExpiry(),

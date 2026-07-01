@@ -5,6 +5,10 @@ import {
   goldenDuskAgentFetch,
 } from "./agent-auth-client";
 import { getGoldenDuskAccessToken } from "./agent-auth-service";
+import {
+  getGoldenDuskBookingsCached,
+  invalidateGoldenDuskBookingsCache,
+} from "./golden-dusk-booking-cache";
 import type {
   GoldenDuskAccommodationAvailability,
   GoldenDuskBookingCustomerInput,
@@ -87,7 +91,9 @@ async function withGoldenDuskSession<T>(
 ): Promise<T> {
   const session = await getGoldenDuskAccessToken(membershipId);
   if (!session) {
-    throw new Error("Connect your GoldenDusk agent account in Settings first.");
+    throw new Error(
+      "Your SWAIBMS session expired. Sign in again as a travel agent to book.",
+    );
   }
   return work(session.token, session);
 }
@@ -141,17 +147,24 @@ export async function createGoldenDuskBooking(input: {
       token,
       body: payload,
     });
-  });
+  }).finally(() => invalidateGoldenDuskBookingsCache(input.membershipId));
 }
 
-export async function listGoldenDuskBookings(membershipId: string) {
-  return withGoldenDuskSession(membershipId, async (token) => {
-    const data = await goldenDuskAgentFetch<GoldenDuskReservation[] | GoldenDuskReservation>(
-      "/agent/bookings",
-      { token },
-    );
-    return Array.isArray(data) ? data : data ? [data] : [];
-  });
+export async function listGoldenDuskBookings(
+  membershipId: string,
+  options?: { refresh?: boolean },
+) {
+  return getGoldenDuskBookingsCached(
+    membershipId,
+    () =>
+      withGoldenDuskSession(membershipId, async (token) => {
+        const data = await goldenDuskAgentFetch<
+          GoldenDuskReservation[] | GoldenDuskReservation
+        >("/agent/bookings", { token });
+        return Array.isArray(data) ? data : data ? [data] : [];
+      }),
+    options,
+  );
 }
 
 export async function getGoldenDuskBooking(
@@ -174,7 +187,7 @@ export async function cancelGoldenDuskBooking(
       `/agent/bookings/${bookingId}/cancel`,
       { method: "POST", token, body: {} },
     ),
-  );
+  ).finally(() => invalidateGoldenDuskBookingsCache(membershipId));
 }
 
 export async function checkGoldenDuskAccommodationAvailability(input: {

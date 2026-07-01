@@ -13,7 +13,9 @@ export async function quoteGoldenDuskActivity(input: {
 }): Promise<GoldenDuskActivityQuoteResult> {
   const session = await getGoldenDuskAccessToken(input.membershipId);
   if (!session) {
-    throw new Error("Connect your GoldenDusk agent account in Settings first.");
+    throw new Error(
+      "Your SWAIBMS session expired. Sign in again as a travel agent to book.",
+    );
   }
 
   const quote = await quoteGoldenDuskBooking({

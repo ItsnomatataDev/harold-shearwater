@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireAgentContext } from "@/features/auth/services/auth-context";
 import { AgentGoldenDuskBookingsPage } from "@/features/agent/golden-dusk/AgentGoldenDuskBookingsPage";
+import { AgentBookingsRefreshButton } from "@/features/agent/golden-dusk/AgentBookingsRefreshButton";
 import { loadAgentGoldenDuskBookings } from "@/features/agent/golden-dusk/golden-dusk-booking-actions";
 import { getGoldenDuskConnectionSummary } from "@/features/integrations/golden-dusk/agent-auth-service";
 
@@ -20,18 +21,23 @@ export default async function AgentBookingsRoute() {
 
   return (
     <div className="shell-content space-y-6">
-      <header>
-        <p className="text-[10px] font-bold uppercase tracking-[.16em] text-gold">
-          SWAIBMS
-        </p>
-        <h1 className="mt-2 text-2xl font-semibold text-white">
-          GoldenDusk bookings
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-[#85857d]">
-          Live bookings from GoldenDusk. Harold mirrors confirmed bookings into
-          enquiries so the Shearwater team gets notifications and can read status
-          here.
-        </p>
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[.16em] text-gold">
+            SWAIBMS
+          </p>
+          <h1 className="mt-2 text-2xl font-semibold text-white">
+            GoldenDusk bookings
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[#85857d]">
+            Live bookings from GoldenDusk. Harold mirrors confirmed bookings into
+            enquiries so the Shearwater team gets notifications and can read status
+            here.
+          </p>
+        </div>
+        {connection.connected && organizationId && (
+          <AgentBookingsRefreshButton organizationId={organizationId} />
+        )}
       </header>
 
       <AgentGoldenDuskBookingsPage

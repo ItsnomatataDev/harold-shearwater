@@ -55,6 +55,7 @@ export function GoldenDuskConnectPanel({
   const [code, setCode] = useState("");
 
   const [forgotEmail, setForgotEmail] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [accessForm, setAccessForm] = useState({
     agencyId: "",
     agencyName: "",
@@ -111,45 +112,25 @@ export function GoldenDuskConnectPanel({
 
     return (
       <section className="rounded-2xl border border-[#2e2e2b] bg-[#1a1a18] p-6 space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#2e2e2b] pb-4">
-          <div>
-            <h2 className="text-sm font-semibold text-white">
-              GoldenDusk booking connection
-            </h2>
-            <p className="mt-0.5 text-xs text-[#666]">
-              Live activity quotes and agent session for GoldenDusk.
-            </p>
-          </div>
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() =>
-              run(async () => {
-                await refreshGoldenDuskAgentProfileAction();
-                router.refresh();
-              })
-            }
-            className="btn-ghost text-[10px] uppercase tracking-wider"
-          >
-            Refresh profile
-          </button>
+        <div className="border-b border-[#2e2e2b] pb-4">
+          <h2 className="text-sm font-semibold text-white">Booking session</h2>
+          <p className="mt-0.5 text-xs text-[#666]">
+            Connected automatically when you sign in as a travel agent. You do
+            not need to disconnect after a normal sign-in.
+          </p>
         </div>
 
         <div className="rounded-xl border border-emerald-700/30 bg-emerald-900/15 px-4 py-3">
-          <p className="text-xs font-semibold text-emerald-300">Connected</p>
+          <p className="text-xs font-semibold text-emerald-300">Active</p>
           <p className="mt-1 text-sm text-emerald-100/80">
-            {summary.liveProfile?.fullName ?? summary.connectedEmail}
+            {summary.liveProfile?.fullName ??
+              summary.connectedEmail ??
+              "Agent session connected"}
             {summary.agencyName ? ` · ${summary.agencyName}` : ""}
           </p>
           {summary.consultantName && (
             <p className="mt-1 text-xs text-emerald-200/70">
               Consultant: {summary.consultantName}
-            </p>
-          )}
-          {summary.liveProfile?.currencyCode && (
-            <p className="mt-1 text-xs text-emerald-200/70">
-              Currency: {summary.liveProfile.currencyCode}
-              {summary.liveProfile.mfaEnabled ? " · MFA on" : ""}
             </p>
           )}
         </div>
@@ -167,57 +148,67 @@ export function GoldenDuskConnectPanel({
               })}{" "}
               <span className="text-xs font-normal text-[#888]">available</span>
             </p>
-            <p className="mt-1 text-xs text-[#666]">
-              Limit {creditLine.creditLimit.toFixed(2)} · Outstanding{" "}
-              {creditLine.outstanding.toFixed(2)}
-            </p>
-          </div>
-        )}
-
-        {recoveryCodes.length > 0 && (
-          <div className="rounded-xl border border-gold/30 bg-gold/10 px-4 py-3">
-            <p className="text-xs font-semibold text-gold">
-              Save these recovery codes
-            </p>
-            <p className="mt-1 text-[11px] text-[#d8ccb0]">
-              Shown once after MFA setup. Store them somewhere safe.
-            </p>
-            <ul className="mt-3 grid gap-1 font-mono text-xs text-white sm:grid-cols-2">
-              {recoveryCodes.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
           </div>
         )}
 
         <div className="flex flex-wrap gap-2">
-          <Link href="/agent/products" className="btn-primary text-xs">
-            Browse products
+          <Link href="/agent/bookings" className="btn-primary text-xs">
+            View bookings
           </Link>
           <button
             type="button"
-            disabled={pending}
-            onClick={() =>
-              run(async () => {
-                await disconnectGoldenDuskAgentAction();
-                setConnected(false);
-                setSummary({
-                  connected: false,
-                  connectedEmail: null,
-                  agencyName: null,
-                  consultantName: null,
-                  tokenExpiresAt: null,
-                  liveProfile: null,
-                });
-                setRecoveryCodes([]);
-                router.refresh();
-              })
-            }
+            onClick={() => setShowAdvanced((value) => !value)}
             className="btn-ghost text-xs text-[#888] hover:text-white"
           >
-            Disconnect
+            {showAdvanced ? "Hide advanced" : "Advanced options"}
           </button>
         </div>
+
+        {showAdvanced && (
+          <div className="space-y-3 border-t border-[#2e2e2b] pt-4">
+            <p className="text-xs text-[#777]">
+              Only disconnect if you need to clear a broken booking session or
+              switch SWAIBMS accounts. Normal sign-out from the sidebar is
+              enough for day-to-day use.
+            </p>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() =>
+                run(async () => {
+                  await refreshGoldenDuskAgentProfileAction();
+                  router.refresh();
+                })
+              }
+              className="btn-ghost text-xs"
+            >
+              Refresh booking profile
+            </button>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() =>
+                run(async () => {
+                  await disconnectGoldenDuskAgentAction();
+                  setConnected(false);
+                  setSummary({
+                    connected: false,
+                    connectedEmail: null,
+                    agencyName: null,
+                    consultantName: null,
+                    tokenExpiresAt: null,
+                    liveProfile: null,
+                  });
+                  setRecoveryCodes([]);
+                  router.refresh();
+                })
+              }
+              className="btn-ghost text-xs text-[#888] hover:text-white"
+            >
+              Disconnect booking session
+            </button>
+          </div>
+        )}
       </section>
     );
   }
@@ -226,11 +217,12 @@ export function GoldenDuskConnectPanel({
     <section className="rounded-2xl border border-[#2e2e2b] bg-[#1a1a18] p-6 space-y-4">
       <div className="border-b border-[#2e2e2b] pb-4">
         <h2 className="text-sm font-semibold text-white">
-          GoldenDusk agent account
+          Booking session recovery
         </h2>
         <p className="mt-0.5 text-xs text-[#666]">
-          Sign in, recover access, or request a new GoldenDusk agent portal
-          account.
+          Travel agents normally connect during sign-in. Use this panel only if
+          your booking session expired, you need a password reset, or you are
+          requesting new agent access.
         </p>
       </div>
 

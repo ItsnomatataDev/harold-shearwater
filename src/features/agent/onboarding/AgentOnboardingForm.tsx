@@ -4,13 +4,20 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { completeAgentOnboarding } from "./onboarding-actions";
 import { Icon } from "@/components/Icon";
+import type { AgentGoldenDuskProfileView } from "@/features/agent/profile/agent-display-profile";
 
-export function AgentOnboardingForm({ name }: { name: string }) {
+export function AgentOnboardingForm({
+  name,
+  goldenDusk,
+}: {
+  name: string;
+  goldenDusk: AgentGoldenDuskProfileView | null;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
-    agencyName: "",
+    agencyName: goldenDusk?.agencyName ?? "",
     website: "",
     phone: "",
   });
@@ -47,9 +54,16 @@ export function AgentOnboardingForm({ name }: { name: string }) {
             Set up your travel agency
           </h1>
           <p className="mt-2 text-sm text-[#888]">
-            Agent Access is for travel companies and tour operators — not individual
-            guests. Tell us about your agency to complete your company profile.
+            {goldenDusk?.agencyName
+              ? "We loaded your agency from SWAIBMS. Confirm or adjust the details below."
+              : "Agent Access is for travel companies and tour operators — not individual guests. Tell us about your agency to complete your company profile."}
           </p>
+          {goldenDusk?.fullName && (
+            <p className="mt-2 text-xs text-emerald-300/80">
+              Booking account: {goldenDusk.fullName}
+              {goldenDusk.agencyName ? ` · ${goldenDusk.agencyName}` : ""}
+            </p>
+          )}
         </div>
 
         <form

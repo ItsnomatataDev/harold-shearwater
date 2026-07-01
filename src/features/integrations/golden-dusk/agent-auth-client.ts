@@ -55,31 +55,84 @@ async function parseEnvelope<T>(response: Response, url: string): Promise<T> {
   return envelope.data as T;
 }
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function parseRetryAfterMs(response: Response) {
+  const header = response.headers.get("retry-after")?.trim();
+  if (!header) return null;
+  const seconds = Number(header);
+  if (Number.isFinite(seconds) && seconds > 0) {
+    return Math.min(seconds * 1000, 30_000);
+  }
+  const dateMs = Date.parse(header);
+  if (Number.isFinite(dateMs)) {
+    return Math.min(Math.max(dateMs - Date.now(), 0), 30_000);
+  }
+  return null;
+}
+
+async function agentFetchWithRetry(
+  url: string,
+  init: RequestInit,
+  retryOnRateLimit: boolean,
+): Promise<Response> {
+  const maxAttempts = retryOnRateLimit ? 3 : 1;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const response = await fetch(url, { ...init, cache: "no-store" });
+
+    if (
+      response.status === 429 &&
+      retryOnRateLimit &&
+      attempt < maxAttempts
+    ) {
+      const retryAfterMs =
+        parseRetryAfterMs(response) ?? Math.min(2000 * 2 ** (attempt - 1), 8000);
+      await sleep(retryAfterMs);
+      continue;
+    }
+
+    return response;
+  }
+
+  throw new GoldenDuskApiError("GoldenDusk agent request failed (429)", 429, url);
+}
+
 async function agentPost<T>(
   path: string,
   body: unknown,
   token?: string,
+  options?: { retryOnRateLimit?: boolean },
 ): Promise<T> {
   const baseUrl = getGoldenDuskApiBaseUrl();
   const url = `${baseUrl}${path.startsWith("/") ? path : `/${path}`}`;
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  const retryOnRateLimit = options?.retryOnRateLimit ?? false;
+  const response = await agentFetchWithRetry(
+    url,
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(body),
     },
-    body: JSON.stringify(body),
-    cache: "no-store",
-  });
+    retryOnRateLimit,
+  );
+
   return parseEnvelope<T>(response, url);
 }
 
 export async function goldenDuskAgentLogin(email: string, password: string) {
-  return agentPost<GoldenDuskAgentLoginResult>("/agent/auth/login", {
-    email,
-    password,
-  });
+  return agentPost<GoldenDuskAgentLoginResult>(
+    "/agent/auth/login",
+    { email, password },
+    undefined,
+    { retryOnRateLimit: true },
+  );
 }
 
 export async function goldenDuskAgentVerifyMfa(input: {
@@ -87,17 +140,25 @@ export async function goldenDuskAgentVerifyMfa(input: {
   factor: string;
   code: string;
 }) {
-  return agentPost<GoldenDuskAgentAuthResult>("/agent/auth/mfa/verify", {
-    challengeToken: input.challengeToken,
-    factor: input.factor,
-    code: input.code,
-  });
+  return agentPost<GoldenDuskAgentAuthResult>(
+    "/agent/auth/mfa/verify",
+    {
+      challengeToken: input.challengeToken,
+      factor: input.factor,
+      code: input.code,
+    },
+    undefined,
+    { retryOnRateLimit: true },
+  );
 }
 
 export async function goldenDuskAgentSendEmailOtp(challengeToken: string) {
-  return agentPost<boolean>("/agent/auth/mfa/send-email-otp", {
-    challengeToken,
-  });
+  return agentPost<boolean>(
+    "/agent/auth/mfa/send-email-otp",
+    { challengeToken },
+    undefined,
+    { retryOnRateLimit: true },
+  );
 }
 
 export async function goldenDuskAgentRefreshToken(refreshToken: string) {
@@ -113,19 +174,27 @@ export async function goldenDuskAgentRevokeToken(refreshToken: string) {
 }
 
 export async function goldenDuskAgentMfaSetup(challengeToken: string) {
-  return agentPost<GoldenDuskMfaSetupResult>("/agent/auth/mfa/setup", {
-    challengeToken,
-  });
+  return agentPost<GoldenDuskMfaSetupResult>(
+    "/agent/auth/mfa/setup",
+    { challengeToken },
+    undefined,
+    { retryOnRateLimit: true },
+  );
 }
 
 export async function goldenDuskAgentMfaConfirm(input: {
   challengeToken: string;
   code: string;
 }) {
-  return agentPost<GoldenDuskAgentAuthResult>("/agent/auth/mfa/confirm", {
-    challengeToken: input.challengeToken,
-    code: input.code,
-  });
+  return agentPost<GoldenDuskAgentAuthResult>(
+    "/agent/auth/mfa/confirm",
+    {
+      challengeToken: input.challengeToken,
+      code: input.code,
+    },
+    undefined,
+    { retryOnRateLimit: true },
+  );
 }
 
 export async function goldenDuskAgentForgotPassword(email: string) {
@@ -194,20 +263,29 @@ export async function goldenDuskAgentMe(token: string) {
 
 export async function goldenDuskAgentFetch<T>(
   path: string,
-  init?: { method?: "GET" | "POST" | "PUT"; body?: unknown; token: string },
+  init?: {
+    method?: "GET" | "POST" | "PUT";
+    body?: unknown;
+    token: string;
+    retryOnRateLimit?: boolean;
+  },
 ): Promise<T> {
   const baseUrl = getGoldenDuskApiBaseUrl();
   const url = `${baseUrl}${path.startsWith("/") ? path : `/${path}`}`;
-  const response = await fetch(url, {
-    method: init?.method ?? "GET",
-    headers: {
-      Accept: "application/json",
-      ...(init?.body ? { "Content-Type": "application/json" } : {}),
-      Authorization: `Bearer ${init?.token}`,
+  const retryOnRateLimit = init?.retryOnRateLimit ?? true;
+  const response = await agentFetchWithRetry(
+    url,
+    {
+      method: init?.method ?? "GET",
+      headers: {
+        Accept: "application/json",
+        ...(init?.body ? { "Content-Type": "application/json" } : {}),
+        Authorization: `Bearer ${init?.token}`,
+      },
+      body: init?.body ? JSON.stringify(init.body) : undefined,
     },
-    body: init?.body ? JSON.stringify(init.body) : undefined,
-    cache: "no-store",
-  });
+    retryOnRateLimit,
+  );
   return parseEnvelope<T>(response, url);
 }
 

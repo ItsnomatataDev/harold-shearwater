@@ -31,11 +31,14 @@ export function AgentGoldenDuskBookingsPage({
   if (!connected) {
     return (
       <div className="rounded-2xl border border-gold/30 bg-gold/10 px-5 py-6 text-sm text-[#e8dcc0]">
-        Connect your GoldenDusk agent account in{" "}
+        Sign in again using{" "}
+        <span className="font-semibold text-gold">Travel agent</span> on the login
+        page to load your bookings automatically. If your session expired, you can
+        also reconnect in{" "}
         <Link href="/agent/settings" className="font-semibold text-gold hover:underline">
           Settings
-        </Link>{" "}
-        to list live SWAIBMS bookings here.
+        </Link>
+        .
       </div>
     );
   }
