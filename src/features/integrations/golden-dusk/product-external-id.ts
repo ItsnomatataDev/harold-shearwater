@@ -61,3 +61,11 @@ export function parseGoldenDuskProductId(
   }
   return null;
 }
+
+/** Client-safe: whether this catalog product can use SWAIBMS accommodation availability. */
+export function productUsesGoldenDuskAvailability(product: {
+  external_id?: string | null;
+}): boolean {
+  if (parseGoldenDuskAccommodationId(product.external_id)) return true;
+  return product.external_id?.startsWith("ROOM-") === true;
+}

@@ -2,6 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 import type { AuthContext } from "@/features/auth/services/auth-context";
+import { getGoldenDuskAgencyCreditLine } from "@/features/integrations/golden-dusk/agent-credit";
 import {
   fetchGoldenDuskAgentMe,
   getGoldenDuskConnectionSummary,
@@ -163,14 +164,16 @@ export async function getAgentSettingsPageData(
   context: AuthContext,
   membershipId: string,
 ) {
-  const [goldenDusk, connection] = await Promise.all([
+  const [goldenDusk, connection, agencyCredit] = await Promise.all([
     getAgentGoldenDuskProfileView(membershipId),
     getGoldenDuskConnectionSummary(membershipId),
+    getGoldenDuskAgencyCreditLine(membershipId).catch(() => null),
   ]);
 
   return {
     goldenDusk,
     connection,
+    agencyCredit,
     defaults: buildAgentSettingsDefaults(context, goldenDusk),
     display: await getAgentDisplayIdentity(context, membershipId),
   };

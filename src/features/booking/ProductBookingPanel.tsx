@@ -5,6 +5,7 @@ import { Icon } from "@/components/Icon";
 import type { ProductWithDetails } from "@/features/products/products-service";
 import {
   searchAvailability,
+  searchGoldenDuskAvailability,
   type AvailabilitySearchResponse,
 } from "./availability-actions";
 import {
@@ -13,6 +14,7 @@ import {
   productSupportsAvailabilityCheck,
   type AvailabilityResult,
 } from "./availability-shared";
+import { productUsesGoldenDuskAvailability } from "@/features/integrations/golden-dusk/product-external-id";
 import { RoomTypeAvailabilityNotice } from "./RoomTypeAvailabilityNotice";
 import {
   submitAgentProductBookingRequest,
@@ -45,10 +47,14 @@ function AvailabilitySnapshot({
   result,
   unitKeys,
   roomTypeLabel,
+  source,
+  truncated,
 }: {
   result: AvailabilityResult;
   unitKeys: { key: string; label: string }[];
   roomTypeLabel?: string;
+  source?: "public" | "golden-dusk";
+  truncated?: boolean;
 }) {
   const keys = new Set(unitKeys.map((unit) => unit.key));
   const visibleUnits =
@@ -68,11 +74,19 @@ function AvailabilitySnapshot({
   return (
     <div className="space-y-3 rounded-xl border border-[#2f2f2b] bg-[#141412] p-3">
       <p className="text-[11px] font-semibold uppercase tracking-[.12em] text-savannah">
-        Live availability — room type
+        {source === "golden-dusk"
+          ? "SWAIBMS availability — room type"
+          : "Live availability — room type"}
       </p>
       {singleUnit && (
         <RoomTypeAvailabilityNotice compact />
       )}
+      {truncated ? (
+        <p className="text-[11px] leading-4 text-[#b9a77b]">
+          Showing the first part of your date range from SWAIBMS. Narrow the
+          dates for a complete view.
+        </p>
+      ) : null}
       <div className="space-y-2">
         {result.days.map((day) => {
           const unit = visibleUnits[0];
@@ -168,10 +182,19 @@ export function ProductBookingPanel({
     amountDue: number | null;
     currencyCode: string;
     quotedAt: string;
+    agencyCredit: {
+      currencyCode: string;
+      creditLimit: number;
+      outstanding: number;
+      available: number;
+      hasCreditFacility: boolean;
+      source?: "finance-balance" | "auth-me";
+    } | null;
+    creditExceeded: boolean;
   }>(null);
-  const [availability, setAvailability] = useState<AvailabilityResult | null>(
-    null,
-  );
+  const [availability, setAvailability] = useState<
+    (AvailabilityResult & { source?: "public" | "golden-dusk"; truncated?: boolean }) | null
+  >(null);
   const [confirming, setConfirming] = useState(false);
   const [confirmed, setConfirmed] = useState<null | {
     reference: string;
@@ -198,16 +221,36 @@ export function ProductBookingPanel({
     if (!start) return;
     setChecking(true);
     setError(null);
-    const response: AvailabilitySearchResponse = await searchAvailability({
-      startDate: start,
-      endDate: end || start,
-    });
+
+    const useGoldenDusk =
+      liveBookingMode && productUsesGoldenDuskAvailability(product);
+
+    let response: AvailabilitySearchResponse;
+    if (useGoldenDusk && organizationId) {
+      response = await searchGoldenDuskAvailability(organizationId, {
+        productId: product.id,
+        startDate: start,
+        endDate: end || start,
+        nights: 1,
+        rooms: 1,
+      });
+    } else {
+      response = await searchAvailability({
+        startDate: start,
+        endDate: end || start,
+      });
+    }
+
     setChecking(false);
     if (response.ok) {
       setAvailability(response.result);
     } else {
       setAvailability(null);
-      setError(response.error);
+      setError(
+        "notConnected" in response && response.notConnected
+          ? "Your SWAIBMS session expired. Sign in again as a travel agent, or reconnect in Settings."
+          : response.error,
+      );
     }
   }
 
@@ -251,6 +294,12 @@ export function ProductBookingPanel({
       setError("Client name is required to confirm a GoldenDusk booking.");
       return;
     }
+    if (quote?.creditExceeded) {
+      setError(
+        "This quote exceeds your agency SWAIBMS credit. Contact Shearwater finance before confirming.",
+      );
+      return;
+    }
     setConfirming(true);
     setError(null);
     const response = await confirmGoldenDuskProductBooking(organizationId, {
@@ -260,6 +309,7 @@ export function ProductBookingPanel({
       partySize: Number(partySize) || 1,
       contactName: contactName.trim(),
       notes: notes || undefined,
+      quotedTotalAmount: quote?.totalAmount,
     });
     setConfirming(false);
     if (response.ok) {
@@ -524,13 +574,19 @@ export function ProductBookingPanel({
             className="btn-ghost inline-flex w-full items-center justify-center gap-2 text-xs disabled:opacity-50"
           >
             <Icon name="search" className="h-3.5 w-3.5" />
-            {checking ? "Checking availability…" : "Check live availability"}
+            {checking
+              ? "Checking availability…"
+              : liveBookingMode && productUsesGoldenDuskAvailability(product)
+                ? "Check SWAIBMS availability"
+                : "Check live availability"}
           </button>
           {availability && (
             <AvailabilitySnapshot
               result={availability}
               unitKeys={availabilityUnits}
               roomTypeLabel={isRoomType ? product.name : undefined}
+              source={availability.source}
+              truncated={availability.truncated}
             />
           )}
         </div>
@@ -601,9 +657,52 @@ export function ProductBookingPanel({
                     {Number(partySize) === 1 ? "" : "s"} on{" "}
                     {formatDisplayDate(preferredDate)}.
                   </p>
+                  {quote.agencyCredit?.hasCreditFacility ? (
+                    <p className="mt-3 text-xs text-emerald-100/70">
+                      Agency credit available:{" "}
+                      <span className="font-semibold text-white">
+                        {quote.agencyCredit.currencyCode}{" "}
+                        {quote.agencyCredit.available.toLocaleString("en-GB", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </span>
+                      {quote.agencyCredit.source === "finance-balance" ? (
+                        <span className="text-emerald-200/60">
+                          {" "}
+                          · SWAIBMS balance
+                        </span>
+                      ) : null}
+                      {quote.agencyCredit.outstanding > 0 ? (
+                        <>
+                          {" "}
+                          · outstanding{" "}
+                          {quote.agencyCredit.currencyCode}{" "}
+                          {quote.agencyCredit.outstanding.toLocaleString(
+                            "en-GB",
+                            {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            },
+                          )}
+                        </>
+                      ) : null}
+                    </p>
+                  ) : null}
+                  {quote.creditExceeded ? (
+                    <div className="mt-3 rounded-lg border border-amber-700/40 bg-amber-900/15 px-3 py-2 text-xs leading-5 text-amber-100">
+                      This quote exceeds your agency SWAIBMS credit limit.
+                      Contact Shearwater finance to increase your facility or
+                      settle outstanding balance before confirming.
+                    </div>
+                  ) : null}
                   <button
                     type="button"
-                    disabled={confirming || !contactName.trim()}
+                    disabled={
+                      confirming ||
+                      !contactName.trim() ||
+                      quote.creditExceeded
+                    }
                     onClick={runGoldenDuskConfirm}
                     className="btn-primary mt-4 w-full text-xs disabled:opacity-50"
                   >

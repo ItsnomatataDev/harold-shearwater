@@ -1,7 +1,7 @@
 import "server-only";
 
-import { fetchAvailability } from "@/features/booking/availability-service";
 import { AVAILABILITY_UNIT_TYPES } from "@/features/booking/availability-shared";
+import { resolveLiveAvailability } from "@/features/integrations/golden-dusk/availability-resolver";
 import { getAvailabilityRoomProducts } from "@/features/products/products-service";
 import type { HaroldWebhookModuleContext } from "@/features/team/harold/harold-webhook";
 
@@ -98,9 +98,12 @@ function buildAssistantBrief(
   days: HaroldLiveAvailability["days"],
   startDate: string,
   endDate: string,
+  source: "public" | "golden-dusk",
 ): string {
   const lines = [
-    "=== SHEARWATER LIVE AVAILABILITY (AUTHORITATIVE) ===",
+    source === "golden-dusk"
+      ? "=== SHEARWATER LIVE AVAILABILITY (SWAIBMS — AUTHORITATIVE) ==="
+      : "=== SHEARWATER LIVE AVAILABILITY (AUTHORITATIVE) ===",
     model.explanation,
     model.bookingFlow,
     "",
@@ -122,6 +125,7 @@ function buildAssistantBrief(
 
 export async function buildHaroldAvailabilityContext(
   message?: string,
+  options?: { membershipId?: string | null },
 ): Promise<HaroldLiveAvailability> {
   const extracted = message ? extractDateRangeFromMessage(message) : null;
   const startDate = extracted?.startDate ?? todayIso();
@@ -129,9 +133,17 @@ export async function buildHaroldAvailabilityContext(
   const model = buildAvailabilityModel();
 
   const [result, roomProducts] = await Promise.all([
-    fetchAvailability(startDate, endDate),
+    resolveLiveAvailability({
+      startDate,
+      endDate,
+      membershipId: options?.membershipId,
+    }),
     getAvailabilityRoomProducts(),
   ]);
+
+  if (!result) {
+    throw new Error("Unable to load live availability right now.");
+  }
 
   const catalogRoomTypes = AVAILABILITY_UNIT_TYPES.map((unit) => ({
     key: unit.key,
@@ -166,17 +178,28 @@ export async function buildHaroldAvailabilityContext(
 
   const liveAvailability: HaroldLiveAvailability = {
     source:
-      process.env.AVAILABILITY_API_URL?.trim() ||
-      "https://swagoldendusk.xyz/api/availability",
+      result.source === "golden-dusk"
+        ? "SWAIBMS agent API (/agent/bookings/availability)"
+        : process.env.AVAILABILITY_API_URL?.trim() ||
+          "https://swagoldendusk.xyz/api/availability",
     fetchedAt: new Date().toISOString(),
-    startDate,
-    endDate,
+    startDate: result.startDate,
+    endDate: result.endDate,
     authoritative: true,
     ratesAvailable: false,
     model,
-    assistantBrief: buildAssistantBrief(model, days, startDate, endDate),
+    assistantBrief: buildAssistantBrief(
+      model,
+      days,
+      result.startDate,
+      result.endDate,
+      result.source,
+    ),
     instructions: [
       "liveAvailability is authoritative for room TYPE counts only — never invent availability.",
+      result.source === "golden-dusk"
+        ? "Counts come from SWAIBMS for the signed-in agent session."
+        : "Counts come from the public availability feed.",
       "unitsLeft means how many units of that room type are free, NOT a specific room number.",
       "canShowIndividualRoomNumbers is false — never say Room 101, Room 204, etc.",
       "If asked for a specific room number, explain that Shearwater assigns the exact room at confirmation.",
@@ -199,8 +222,12 @@ export async function buildHaroldAvailabilityContext(
 export async function augmentHaroldModuleWithAvailability(
   module: HaroldWebhookModuleContext | undefined,
   message: string,
+  options?: { membershipId?: string | null },
 ): Promise<HaroldWebhookModuleContext> {
-  const liveAvailability = await buildHaroldAvailabilityContext(message);
+  const liveAvailability = await buildHaroldAvailabilityContext(
+    message,
+    options,
+  );
   const base: HaroldWebhookModuleContext = module ?? {
     id: "general",
     label: "General",

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Icon } from "@/components/Icon";
 import {
   searchAvailability,
+  searchGoldenDuskAvailability,
   type AvailabilitySearchResponse,
 } from "./availability-actions";
 import type {
@@ -305,15 +306,20 @@ function RangeResult({ result }: { result: AvailabilityResult }) {
 export function AvailabilityCheck({
   roomMeta,
   organizationId,
+  goldenDuskConnected = false,
 }: {
   roomMeta?: RoomMetaMap;
   /** When set, available rooms show a booking request action (agent portal). */
   organizationId?: string;
+  /** When true, availability is fetched from SWAIBMS instead of the public API. */
+  goldenDuskConnected?: boolean;
 }) {
   const [pending, startTransition] = useTransition();
   const [mode, setMode] = useState<"single" | "range">("single");
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<AvailabilityResult | null>(null);
+  const [result, setResult] = useState<
+    (AvailabilityResult & { source?: "public" | "golden-dusk"; truncated?: boolean }) | null
+  >(null);
   const [checkedMode, setCheckedMode] = useState<"single" | "range">("single");
   const [date, setDate] = useState(() => todayIso());
   const [endDate, setEndDate] = useState(() => todayIso(7));
@@ -325,16 +331,30 @@ export function AvailabilityCheck({
     const finalEnd = mode === "single" ? date : endDate;
     const submittedMode = mode;
     startTransition(async () => {
-      const response: AvailabilitySearchResponse = await searchAvailability({
-        startDate,
-        endDate: finalEnd,
-      });
+      let response: AvailabilitySearchResponse;
+      if (goldenDuskConnected && organizationId) {
+        response = await searchGoldenDuskAvailability(organizationId, {
+          startDate,
+          endDate: finalEnd,
+          nights: 1,
+          rooms: 1,
+        });
+      } else {
+        response = await searchAvailability({
+          startDate,
+          endDate: finalEnd,
+        });
+      }
       if (response.ok) {
         setResult(response.result);
         setCheckedMode(submittedMode);
       } else {
         setResult(null);
-        setError(response.error);
+        setError(
+          "notConnected" in response && response.notConnected
+            ? "Your SWAIBMS session expired. Sign in again as a travel agent to check live availability."
+            : response.error,
+        );
       }
     });
   }
@@ -417,6 +437,16 @@ export function AvailabilityCheck({
           <Icon name="alertCircle" className="mt-0.5 h-4 w-4 shrink-0" />
           {error}
         </div>
+      )}
+
+      {result && !error && (
+        <p className="text-[11px] uppercase tracking-[.12em] text-[#77776f]">
+          Source:{" "}
+          <span className="text-[#b9a77b]">
+            {result.source === "golden-dusk" ? "SWAIBMS agent API" : "Public availability feed"}
+          </span>
+          {result.truncated ? " · range truncated for SWAIBMS limits" : null}
+        </p>
       )}
 
       {result && !error && checkedMode === "single" && (

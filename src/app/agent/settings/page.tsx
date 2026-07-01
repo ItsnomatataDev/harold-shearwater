@@ -11,7 +11,8 @@ export default async function AgentSettingsPage() {
   const agent = await requireAgentContext();
   if (!agent?.membership.organizationId) redirect("/auth/continue");
 
-  const { goldenDusk, connection, defaults } = await getAgentSettingsPageData(
+  const { goldenDusk, connection, defaults, agencyCredit } =
+    await getAgentSettingsPageData(
     agent.context,
     agent.membership.id,
   );
@@ -35,7 +36,10 @@ export default async function AgentSettingsPage() {
         defaults={defaults}
         goldenDusk={goldenDusk}
       />
-      <GoldenDuskConnectPanel connection={connection} />
+      <GoldenDuskConnectPanel
+        connection={connection}
+        agencyCredit={agencyCredit}
+      />
     </div>
   );
 }

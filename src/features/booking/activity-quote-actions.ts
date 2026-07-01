@@ -4,6 +4,11 @@ import { z } from "zod";
 import { requireAgentContext } from "@/features/auth/services/auth-context";
 import { GoldenDuskApiError } from "@/features/integrations/golden-dusk/client";
 import { quoteGoldenDuskActivity } from "@/features/integrations/golden-dusk/agent-quote-service";
+import {
+  getGoldenDuskAgencyCreditLine,
+  isCreditLimitExceeded,
+  mapCreditLimitApiError,
+} from "@/features/integrations/golden-dusk/agent-credit";
 import { parseGoldenDuskActivityId } from "@/features/integrations/golden-dusk/product-external-id";
 import {
   getOperatingOrganizationId,
@@ -23,11 +28,14 @@ export type ActivityQuoteResponse =
       amountDue: number | null;
       currencyCode: string;
       quotedAt: string;
+      agencyCredit: Awaited<ReturnType<typeof getGoldenDuskAgencyCreditLine>>;
+      creditExceeded: boolean;
     }
   | {
       ok: false;
       error: string;
       notConnected?: boolean;
+      creditExceeded?: boolean;
     };
 
 export async function quoteAgentActivityBooking(
@@ -74,23 +82,30 @@ export async function quoteAgentActivityBooking(
       },
     });
 
+    const agencyCredit = await getGoldenDuskAgencyCreditLine(agent.membership.id);
+
     return {
       ok: true,
       totalAmount: quote.totalAmount,
       amountDue: quote.amountDue,
       currencyCode: quote.currencyCode ?? "USD",
       quotedAt: new Date().toISOString(),
+      agencyCredit,
+      creditExceeded: isCreditLimitExceeded(agencyCredit, quote.totalAmount),
     };
   } catch (error) {
     if (error instanceof GoldenDuskApiError) {
-    const notConnected = error.message
-      .toLowerCase()
-      .includes("connect your golden dusk")
-      || error.message.toLowerCase().includes("swaibms session expired");
+      const notConnected = error.message
+        .toLowerCase()
+        .includes("connect your golden dusk")
+        || error.message.toLowerCase().includes("swaibms session expired");
+      const creditExceeded = error.message.toLowerCase().includes("credit limit");
+      const creditMessage = mapCreditLimitApiError(error.message);
       return {
         ok: false,
-        error: error.message,
+        error: creditMessage ?? error.message,
         notConnected,
+        creditExceeded: creditExceeded || Boolean(creditMessage),
       };
     }
     const message =

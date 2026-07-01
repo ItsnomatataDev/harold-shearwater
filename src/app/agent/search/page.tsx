@@ -8,6 +8,7 @@ import {
 import { getAvailabilityRoomProducts } from "@/features/products/products-service";
 import { getAvailabilityRoomRateHints } from "@/features/products/product-rates-service";
 import { HaroldModuleContext } from "@/features/harold/HaroldModuleContext";
+import { getGoldenDuskConnectionSummary } from "@/features/integrations/golden-dusk/agent-auth-service";
 
 export const metadata: Metadata = { title: "Availability — Agent" };
 
@@ -15,9 +16,10 @@ export default async function AgentSearchPage() {
   const agent = await requireAgentContext();
   if (!agent?.membership.organizationId) redirect("/auth/continue");
 
-  const [rooms, roomRates] = await Promise.all([
+  const [rooms, roomRates, goldenDuskConnection] = await Promise.all([
     getAvailabilityRoomProducts(),
     getAvailabilityRoomRateHints(agent.membership.id),
+    getGoldenDuskConnectionSummary(agent.membership.id),
   ]);
   const roomMeta: RoomMetaMap = Object.fromEntries(
     Object.values(rooms)
@@ -48,13 +50,20 @@ export default async function AgentSearchPage() {
           Check availability
         </h1>
         <p className="mt-1 text-sm text-[#666]">
-          See how many units are free in each room type for your dates. Counts
-          are per category — not individual room numbers. Exact rooms are
+          See how many units are free in each room type for your dates.
+          {goldenDuskConnection.connected
+            ? " Counts come live from SWAIBMS for your agent session."
+            : " Sign in with your travel agent account to use SWAIBMS availability."}{" "}
+          Counts are per category — not individual room numbers. Exact rooms are
           assigned when Shearwater confirms the booking.
         </p>
       </header>
 
-      <AvailabilityCheck roomMeta={roomMeta} organizationId={agent.membership.organizationId} />
+      <AvailabilityCheck
+        roomMeta={roomMeta}
+        organizationId={agent.membership.organizationId}
+        goldenDuskConnected={goldenDuskConnection.connected}
+      />
     </div>
   );
 }

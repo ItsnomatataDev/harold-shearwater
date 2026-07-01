@@ -18,6 +18,13 @@ import {
   syncGoldenDuskBookingMirror,
 } from "@/features/integrations/golden-dusk/agent-booking-mirror";
 import { notifyTeamOfGoldenDuskBookingConfirmed } from "@/features/integrations/golden-dusk/golden-dusk-booking-notifications";
+import {
+  formatCreditLimitExceededMessage,
+  getGoldenDuskAgencyCreditLine,
+  isCreditLimitExceeded,
+  mapCreditLimitApiError,
+} from "@/features/integrations/golden-dusk/agent-credit";
+import { invalidateGoldenDuskAgencyBalanceCache } from "@/features/integrations/golden-dusk/agent-finance-service";
 import type { GoldenDuskFinancialDocumentType } from "@/features/integrations/golden-dusk/agent-booking-types";
 import { parseGoldenDuskProductId } from "@/features/integrations/golden-dusk/product-external-id";
 import {
@@ -33,6 +40,7 @@ const bookingInputSchema = z.object({
   contactName: z.string().trim().min(1).max(150),
   notes: z.string().trim().max(2000).optional(),
   enquiryId: z.string().uuid().optional(),
+  quotedTotalAmount: z.coerce.number().nonnegative().optional(),
 });
 
 const availabilitySchema = z.object({
@@ -56,20 +64,34 @@ function mapGoldenDuskError(error: unknown, fallback: string) {
       .toLowerCase()
       .includes("connect your golden dusk")
       || error.message.toLowerCase().includes("swaibms session expired");
+    const creditExceeded = error.message.toLowerCase().includes("credit limit");
     if (error.status === 429) {
       return {
         ok: false as const,
         error:
           "The booking system is busy right now. Wait a minute and use Refresh, or try again shortly.",
         notConnected,
+        creditExceeded,
       };
     }
-    return { ok: false as const, error: error.message, notConnected };
+    const creditMessage = mapCreditLimitApiError(error.message);
+    return {
+      ok: false as const,
+      error: creditMessage ?? error.message,
+      notConnected,
+      creditExceeded: creditExceeded || Boolean(creditMessage),
+    };
   }
   const message = error instanceof Error ? error.message : fallback;
   const notConnected = message.toLowerCase().includes("connect your golden dusk")
     || message.toLowerCase().includes("swaibms session expired");
-  return { ok: false as const, error: message, notConnected };
+  const creditMessage = mapCreditLimitApiError(message);
+  return {
+    ok: false as const,
+    error: creditMessage ?? message,
+    notConnected,
+    creditExceeded: Boolean(creditMessage),
+  };
 }
 
 async function resolveBookableProduct(organizationId: string, productId: string) {
@@ -110,6 +132,21 @@ export async function confirmGoldenDuskProductBooking(
       parsed.data.productId,
     );
 
+    const credit = await getGoldenDuskAgencyCreditLine(agent.membership.id);
+    if (
+      parsed.data.quotedTotalAmount != null &&
+      isCreditLimitExceeded(credit, parsed.data.quotedTotalAmount)
+    ) {
+      return {
+        ok: false as const,
+        error: formatCreditLimitExceededMessage(
+          credit!,
+          parsed.data.quotedTotalAmount,
+        ),
+        creditExceeded: true as const,
+      };
+    }
+
     const reservation = await createGoldenDuskBooking({
       membershipId: agent.membership.id,
       partySize: parsed.data.partySize,
@@ -132,6 +169,8 @@ export async function confirmGoldenDuskProductBooking(
         notes: parsed.data.notes,
       },
     });
+
+    invalidateGoldenDuskAgencyBalanceCache(agent.membership.id);
 
     const mirrored = await mirrorGoldenDuskBookingToEnquiry({
       organizationId,
@@ -229,12 +268,16 @@ export async function quoteGoldenDuskProductBooking(
       },
     });
 
+    const agencyCredit = await getGoldenDuskAgencyCreditLine(agent.membership.id);
+
     return {
       ok: true as const,
       totalAmount: quote.totalAmount,
       amountDue: quote.amountDue,
       currencyCode: quote.currencyCode,
       quotedAt: new Date().toISOString(),
+      agencyCredit,
+      creditExceeded: isCreditLimitExceeded(agencyCredit, quote.totalAmount),
     };
   } catch (error) {
     return mapGoldenDuskError(error, "Unable to quote this product.");

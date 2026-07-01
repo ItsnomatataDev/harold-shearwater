@@ -4,7 +4,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { Icon } from "@/components/Icon";
+import {
+  describeAgencyCredit,
+} from "@/features/integrations/golden-dusk/agent-finance-display";
 import type { GoldenDuskConnectionSummary } from "@/features/integrations/golden-dusk/agent-auth-service";
+import type { AgencyCreditLine } from "@/features/integrations/golden-dusk/agent-credit";
 import { GOLDEN_DUSK_MFA_FACTOR_LABELS } from "@/features/integrations/golden-dusk/agent-auth-utils";
 import type { GoldenDuskLoginNextStep } from "@/features/integrations/golden-dusk/agent-auth-types";
 import {
@@ -36,8 +40,10 @@ type AuthStep =
 
 export function GoldenDuskConnectPanel({
   connection,
+  agencyCredit = null,
 }: {
   connection: GoldenDuskConnectionSummary;
+  agencyCredit?: AgencyCreditLine | null;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -107,8 +113,17 @@ export function GoldenDuskConnectPanel({
   }
 
   if (connected) {
-    const credit = summary.liveProfile?.credit;
-    const creditLine = credit?.lines?.[0];
+    const creditLine =
+      agencyCredit ?? summary.liveProfile?.credit?.lines?.[0] ?? null;
+    const creditCurrency =
+      agencyCredit?.currencyCode ??
+      creditLine?.currencyCode ??
+      summary.liveProfile?.currencyCode ??
+      "USD";
+    const creditAvailable =
+      agencyCredit?.available ?? creditLine?.available ?? null;
+    const creditOutstanding =
+      agencyCredit?.outstanding ?? creditLine?.outstanding ?? null;
 
     return (
       <section className="rounded-2xl border border-[#2e2e2b] bg-[#1a1a18] p-6 space-y-4">
@@ -135,19 +150,34 @@ export function GoldenDuskConnectPanel({
           )}
         </div>
 
-        {creditLine && (
+        {creditAvailable != null && (
           <div className="rounded-xl border border-[#2f2f2b] bg-[#141412] px-4 py-3">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-[#777]">
               Agency credit
+              {agencyCredit?.source === "finance-balance" ? (
+                <span className="ml-2 text-[#666]">· SWAIBMS balance</span>
+              ) : null}
             </p>
             <p className="mt-2 text-lg font-semibold text-white">
-              {creditLine.currencyCode ?? "USD"}{" "}
-              {creditLine.available.toLocaleString("en-GB", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}{" "}
-              <span className="text-xs font-normal text-[#888]">available</span>
+              {agencyCredit
+                ? describeAgencyCredit(agencyCredit).availableLabel
+                : `${creditCurrency} ${creditAvailable.toLocaleString("en-GB", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })} available`}
             </p>
+            {creditOutstanding != null && creditOutstanding > 0 ? (
+              <p className="mt-1 text-xs text-[#777]">
+                Outstanding {creditCurrency}{" "}
+                {creditOutstanding.toLocaleString("en-GB", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </p>
+            ) : null}
+            <Link href="/agent/finance" className="mt-3 inline-block text-xs text-gold hover:underline">
+              Open agency finance
+            </Link>
           </div>
         )}
 

@@ -97,6 +97,7 @@ async function resolveAssistant(access: HaroldAccess) {
       access === "customer"
         ? "Shearwater Victoria Falls"
         : membership.organizationName,
+    membershipId: membership.id,
   };
 }
 
@@ -237,6 +238,9 @@ export async function askHaroldAssistant(
         data: parsed.data,
       },
       parsed.message,
+      parsed.access === "agent"
+        ? { membershipId: resolved.membershipId }
+        : undefined,
     );
 
     const result = await sendToHaroldWebhook({

@@ -24,6 +24,7 @@ const agentNavigation: { label: string; href: string; icon: IconName }[] = [
   { label: "Dashboard", href: "/agent/dashboard", icon: "home" },
   { label: "Enquiries", href: "/agent/enquiries", icon: "route" },
   { label: "Bookings", href: "/agent/bookings", icon: "calendar" },
+  { label: "Finance", href: "/agent/finance", icon: "dollar" },
   { label: "Products", href: "/agent/products", icon: "package" },
   { label: "Rates", href: "/agent/rates", icon: "dollar" },
   { label: "Availability", href: "/agent/search", icon: "calendar" },

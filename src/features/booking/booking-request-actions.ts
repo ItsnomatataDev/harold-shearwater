@@ -8,8 +8,11 @@ import {
   requireAgentContext,
 } from "@/features/auth/services/auth-context";
 import { addAgentEnquiry } from "@/features/agent/enquiries/enquiries-actions";
-import { getOperatingOrganizationId } from "@/features/products/products-service";
-import { fetchAvailability } from "./availability-service";
+import {
+  formatAvailabilitySnapshotNote,
+  resolveLiveAvailability,
+} from "@/features/integrations/golden-dusk/availability-resolver";
+import { getOperatingOrganizationId, getProduct } from "@/features/products/products-service";
 import { isMissingDatabaseObject } from "@/lib/supabase/schema-errors";
 
 const bookingSchema = z.object({
@@ -31,34 +34,33 @@ function buildReference() {
   return `SW-${crypto.randomUUID().replaceAll("-", "").slice(0, 8).toUpperCase()}`;
 }
 
-function formatAvailabilityNote(
-  snapshot: Awaited<ReturnType<typeof fetchAvailability>> | null,
-  optionLabel?: string,
-) {
-  if (!snapshot?.days.length) return null;
-  const lines = snapshot.days.map((day) => {
-    const units = Object.entries(day.units)
-      .filter(([, count]) => count > 0)
-      .map(([key, count]) => `${key}: ${count}`)
-      .join(", ");
-    return `${day.date}: ${units || "no availability"}`;
-  });
-  const header = optionLabel
-    ? `Availability snapshot (${optionLabel}):`
-    : "Availability snapshot:";
-  return `${header}\n${lines.join("\n")}`;
-}
+async function loadAvailabilitySnapshot(input: {
+  preferredDate?: string;
+  endDate?: string;
+  membershipId?: string;
+  productId?: string;
+  organizationId?: string;
+}) {
+  if (!input.preferredDate) return null;
 
-async function loadAvailabilitySnapshot(
-  preferredDate?: string,
-  endDate?: string,
-) {
-  if (!preferredDate) return null;
-  try {
-    return await fetchAvailability(preferredDate, endDate ?? preferredDate);
-  } catch {
-    return null;
+  let product: { external_id?: string | null; variants?: { name: string }[] } | undefined;
+  if (input.productId) {
+    const orgId =
+      input.organizationId ?? (await getOperatingOrganizationId()) ?? undefined;
+    if (orgId) {
+      const loaded = await getProduct(orgId, input.productId);
+      if (loaded) {
+        product = { external_id: loaded.external_id, variants: [] };
+      }
+    }
   }
+
+  return resolveLiveAvailability({
+    startDate: input.preferredDate,
+    endDate: input.endDate ?? input.preferredDate,
+    membershipId: input.membershipId,
+    product,
+  });
 }
 
 export async function submitCustomerBookingRequest(
@@ -83,10 +85,10 @@ export async function submitCustomerBookingRequest(
   }
 
   const reference = buildReference();
-  const snapshot = await loadAvailabilitySnapshot(
-    parsed.data.preferredDate,
-    parsed.data.endDate,
-  );
+  const snapshot = await loadAvailabilitySnapshot({
+    preferredDate: parsed.data.preferredDate,
+    endDate: parsed.data.endDate,
+  });
 
   const supabase = await createClient();
   const { error } = await (supabase as any).from("booking_requests").insert({
@@ -141,11 +143,14 @@ export async function submitAgentProductBookingRequest(
     `${agent.context.firstName} ${agent.context.lastName}`.trim() ||
     agent.context.email;
 
-  const snapshot = await loadAvailabilitySnapshot(
-    parsed.data.preferredDate,
-    parsed.data.endDate,
-  );
-  const availabilityNote = formatAvailabilityNote(
+  const snapshot = await loadAvailabilitySnapshot({
+    preferredDate: parsed.data.preferredDate,
+    endDate: parsed.data.endDate,
+    membershipId: agent.membership.id,
+    productId: parsed.data.productId,
+    organizationId,
+  });
+  const availabilityNote = formatAvailabilitySnapshotNote(
     snapshot,
     parsed.data.optionLabel,
   );

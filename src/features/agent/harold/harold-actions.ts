@@ -131,6 +131,7 @@ export async function sendAgentHaroldMessage(
         summary: "Agent is chatting with Harold about clients, products and availability.",
       },
       parsed.message,
+      { membershipId: agent.membership.id },
     );
 
     const webhookResult = await sendToHaroldWebhook({
