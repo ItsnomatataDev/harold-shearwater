@@ -2,12 +2,19 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { requireAgentContext } from "@/features/auth/services/auth-context";
 import { AgentSettingsForm } from "@/features/agent/settings/AgentSettingsForm";
+import { GoldenDuskConnectPanel } from "@/features/agent/golden-dusk/GoldenDuskConnectPanel";
+import { getGoldenDuskConnectionSummary } from "@/features/integrations/golden-dusk/agent-auth-service";
 
 export const metadata: Metadata = { title: "Settings — Agent" };
 
 export default async function AgentSettingsPage() {
   const agent = await requireAgentContext();
   if (!agent?.membership.organizationId) redirect("/auth/continue");
+
+  const goldenDuskConnection = await getGoldenDuskConnectionSummary(
+    agent.membership.id,
+    { includeLiveProfile: true },
+  );
 
   return (
     <div className="space-y-6">
@@ -22,6 +29,7 @@ export default async function AgentSettingsPage() {
           Manage your agency profile and account details.
         </p>
       </header>
+      <GoldenDuskConnectPanel connection={goldenDuskConnection} />
       <AgentSettingsForm
         userId={agent.context.userId}
         defaults={{

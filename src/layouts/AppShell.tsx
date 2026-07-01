@@ -6,10 +6,12 @@ import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { Icon, type IconName } from "../components/Icon";
 import { SignOutButton } from "@/features/auth/components/SignOutButton";
+import { SwitchWorkspaceLink } from "@/features/auth/components/SwitchWorkspaceLink";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
-import { NotificationBell } from "@/features/team/notifications/components/NotificationBell";
+import { NotificationBellLoader } from "@/features/team/notifications/components/NotificationBellLoader";
 import { RealtimeNotificationListener } from "@/features/team/notifications/components/RealtimeNotificationListener";
-import type { NotificationView } from "@/features/team/notifications/notification-service";
+import { HaroldAssistantProvider } from "@/features/harold/HaroldAssistantProvider";
+import { HaroldLauncher } from "@/features/harold/HaroldLauncher";
 
 export interface ShellUser {
   name: string;
@@ -34,14 +36,17 @@ const baseNavigation: {
     href: "/team/communication",
     icon: "communication",
   },
+  { label: "Booking requests", href: "/team/bookings", icon: "route" },
   { label: "Notifications", href: "/team/notifications", icon: "bell" },
   { label: "Document Inbox", href: "/team/inbox", icon: "mail" },
   { label: "Chat", href: "/team/chat", icon: "communication" },
   { label: "CRM", href: "/team/crm", icon: "users" },
   { label: "Deals", href: "/team/crm/deals", icon: "deals" },
+  { label: "Catalog", href: "/team/products", icon: "package" },
+  { label: "Agency Rates", href: "/team/products/rates", icon: "dollar" },
   { label: "Announcements", href: "/team/announcements", icon: "megaphone" },
   { label: "Knowledge Base", href: "/team/knowledge", icon: "knowledge" },
-  { label: "Harold", href: "/team/harold", icon: "harold" },
+  { label: "Harold AI", href: "/team/harold", icon: "harold" },
   { label: "Reports", href: "/team/insights", icon: "insights" },
   { label: "Profile & Settings", href: "/team/settings", icon: "settings" },
 ];
@@ -74,29 +79,38 @@ function Logo() {
 export function AppShell({
   children,
   user,
-  notifications,
   notificationScope,
+  notificationCentrePath = "/team/notifications",
+  workspaceModules,
+  showWorkspaceSwitch = false,
 }: {
   children: ReactNode;
   user: ShellUser;
-  notifications: {
-    unreadCount: number;
-    recent: NotificationView[];
-  };
   notificationScope: {
     userId: string;
     organizationId: string;
   };
+  notificationCentrePath?: string;
+  workspaceModules?: {
+    products?: boolean;
+    rates?: boolean;
+  };
+  showWorkspaceSwitch?: boolean;
 }) {
   const pathname = usePathname();
   const currentPath = pathname ?? "";
   const [open, setOpen] = useState(false);
-  const navigation = baseNavigation;
+  const navigation = baseNavigation.filter((item) => {
+    if (item.href === "/team/products") return workspaceModules?.products;
+    if (item.href === "/team/products/rates") return workspaceModules?.rates;
+    return true;
+  });
 
   const isActive = (href: string) =>
     currentPath === href || currentPath.startsWith(`${href}/`);
 
   return (
+    <HaroldAssistantProvider access="team">
     <div className="app-bg min-h-screen">
       <RealtimeNotificationListener
         userId={notificationScope.userId}
@@ -111,9 +125,9 @@ export function AppShell({
       )}
       <aside
         data-shell-sidebar
-        className={`fixed inset-y-0 left-0 z-50 flex w-[256px] flex-col border-r border-[#292927] bg-[#151514] px-4 py-5 transition-transform duration-300 lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
+        className={`fixed inset-y-0 left-0 z-50 flex w-[256px] flex-col overflow-hidden border-r border-[#292927] bg-[#151514] px-4 py-5 transition-transform duration-300 lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
       >
-        <div className="flex items-center justify-between px-2">
+        <div className="flex shrink-0 items-center justify-between px-2">
           <Logo />
           <button
             aria-label="Close menu"
@@ -123,11 +137,11 @@ export function AppShell({
             <Icon name="close" className="h-5 w-5" />
           </button>
         </div>
-        <div className="my-6 h-px bg-[#292927]" />
-        <p className="px-3 text-[10px] font-semibold uppercase tracking-[.18em] text-[#6f6f69]">
+        <div className="my-6 h-px shrink-0 bg-[#292927]" />
+        <p className="shrink-0 px-3 text-[10px] font-semibold uppercase tracking-[.18em] text-[#6f6f69]">
           Team Access
         </p>
-        <nav className="mt-3 space-y-1">
+        <nav className="mt-3 min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain pr-1">
           {navigation.map((item) => (
             <Link
               key={item.label}
@@ -148,7 +162,12 @@ export function AppShell({
             </Link>
           ))}
         </nav>
-        <div className="mt-auto rounded-2xl border border-[#343431] bg-[#1d1d1b] p-3">
+        <div className="mt-3 shrink-0 rounded-2xl border border-[#343431] bg-[#1d1d1b] p-3">
+          {showWorkspaceSwitch && (
+            <div className="mb-2 border-b border-[#343431] pb-2">
+              <SwitchWorkspaceLink compact />
+            </div>
+          )}
           <div className="flex items-center gap-3">
             <div className="grid h-9 w-9 place-items-center rounded-xl bg-earth text-xs font-bold text-white">
               {user.initials}
@@ -188,14 +207,9 @@ export function AppShell({
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <NotificationBell
+            <NotificationBellLoader
               organizationId={notificationScope.organizationId}
-              notificationCentrePath="/team/notifications"
-              key={`${notifications.unreadCount}:${notifications.recent
-                .map((item) => `${item.id}:${item.readAt ?? "unread"}`)
-                .join(",")}`}
-              initialUnreadCount={notifications.unreadCount}
-              initialNotifications={notifications.recent}
+              notificationCentrePath={notificationCentrePath}
             />
             <div className="ml-2 hidden h-8 w-px bg-[#30302e] sm:block" />
             <button className="ml-1 hidden items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-[#242422] sm:flex">
@@ -213,6 +227,8 @@ export function AppShell({
           {children}
         </main>
       </div>
+      <HaroldLauncher />
     </div>
+    </HaroldAssistantProvider>
   );
 }

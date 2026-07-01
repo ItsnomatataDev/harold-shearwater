@@ -1007,6 +1007,12 @@ export type Database = {
         };
         Relationships: [];
       };
+      platform_admins: {
+        Row: { email: string; user_id: string | null; active: boolean; created_at: string };
+        Insert: { email: string; user_id?: string | null; active?: boolean; created_at?: string };
+        Update: { email?: string; user_id?: string | null; active?: boolean; created_at?: string };
+        Relationships: [];
+      };
       profiles: {
         Row: {
           agency_name: string | null;
@@ -1713,7 +1719,13 @@ export type Database = {
           contact_phone: string | null;
           completed_at: string | null;
           external_booking_reference: string | null;
+          golden_dusk_booking_id: number | null;
+          golden_dusk_reservation_status: string | null;
+          golden_dusk_payment_status: string | null;
+          golden_dusk_snapshot: Json;
+          golden_dusk_synced_at: string | null;
           follow_up_at: string | null;
+          hold_expires_at: string | null;
           party_size: number;
           product_interest: string | null;
           quote_amount: number | null;
@@ -1727,6 +1739,7 @@ export type Database = {
             | "quote_requested"
             | "quoted"
             | "reservation_requested"
+            | "on_hold"
             | "confirmed"
             | "complete"
             | "cancelled";
@@ -1743,7 +1756,13 @@ export type Database = {
           contact_phone?: string | null;
           completed_at?: string | null;
           external_booking_reference?: string | null;
+          golden_dusk_booking_id?: number | null;
+          golden_dusk_reservation_status?: string | null;
+          golden_dusk_payment_status?: string | null;
+          golden_dusk_snapshot?: Json;
+          golden_dusk_synced_at?: string | null;
           follow_up_at?: string | null;
+          hold_expires_at?: string | null;
           party_size?: number;
           product_interest?: string | null;
           quote_amount?: number | null;
@@ -1757,6 +1776,7 @@ export type Database = {
             | "quote_requested"
             | "quoted"
             | "reservation_requested"
+            | "on_hold"
             | "confirmed"
             | "complete"
             | "cancelled";
@@ -1773,7 +1793,13 @@ export type Database = {
           contact_phone?: string | null;
           completed_at?: string | null;
           external_booking_reference?: string | null;
+          golden_dusk_booking_id?: number | null;
+          golden_dusk_reservation_status?: string | null;
+          golden_dusk_payment_status?: string | null;
+          golden_dusk_snapshot?: Json;
+          golden_dusk_synced_at?: string | null;
           follow_up_at?: string | null;
+          hold_expires_at?: string | null;
           party_size?: number;
           product_interest?: string | null;
           quote_amount?: number | null;
@@ -1787,6 +1813,7 @@ export type Database = {
             | "quote_requested"
             | "quoted"
             | "reservation_requested"
+            | "on_hold"
             | "confirmed"
             | "complete"
             | "cancelled";
@@ -2422,6 +2449,7 @@ export type Database = {
         Args: { required_permission: string; target_organization_id: string };
         Returns: boolean;
       };
+      is_platform_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
       request_harold_handover: {
         Args: { requested_reason?: string; target_conversation_id: string };
         Returns: undefined;

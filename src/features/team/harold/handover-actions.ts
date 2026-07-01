@@ -4,10 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import {
-  hasOrganizationPermission,
-  requireTeamContext,
-} from "@/features/auth/services/auth-context";
+import { requireTeamContext } from "@/features/auth/services/auth-context";
 
 const conversationSchema = z.object({ conversationId: z.string().uuid() });
 const replySchema = conversationSchema.extend({
@@ -18,14 +15,6 @@ async function handoverGuard(organizationId: string) {
   const team = await requireTeamContext();
   if (!team || team.membership.organizationId !== organizationId) {
     throw new Error("Team Access is required.");
-  }
-  if (
-    !(await hasOrganizationPermission(
-      organizationId,
-      "harold.handovers.manage",
-    ))
-  ) {
-    throw new Error("You do not have permission to manage Harold handovers.");
   }
   return team;
 }

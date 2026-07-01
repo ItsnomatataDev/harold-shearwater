@@ -145,7 +145,7 @@ export function MembersList({
         <div className="rounded-2xl border border-[#343431] bg-[#1d1d1b]">
           <div className="border-b border-[#343431] px-6 py-4">
             <h3 className="text-lg font-semibold text-white">
-              Memberships awaiting activation ({invited.length})
+              Team Access awaiting activation ({invited.length})
             </h3>
           </div>
           <div className="divide-y divide-[#343431]">

@@ -3,52 +3,44 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getOperatingOrganizationId } from "@/features/products/products-service";
 
-/**
- * Self-service membership activation.
- * Called when an authenticated user has no membership but their metadata
- * indicates they intended to sign up as a customer. Team and Agent accounts
- * are approval based and cannot activate themselves.
- * Uses the admin client so no RLS issues, but verifies the user's own metadata.
- */
-export async function activateSelfMembership() {
+async function requireUser() {
   const supabase = await createClient();
   const {
     data: { user },
     error,
   } = await supabase.auth.getUser();
   if (error || !user) throw new Error("Not authenticated.");
+  return user;
+}
 
+/**
+ * Guest activation — only for users who chose Customer Access at sign-up.
+ */
+export async function activateSelfMembership() {
+  const user = await requireUser();
   const requestedPortal = user.user_metadata?.portal_access;
-  const portalAccess: "team" | "agent" | "customer" =
-    requestedPortal === "team" || requestedPortal === "agent"
-      ? requestedPortal
-      : "customer";
 
-  if (portalAccess === "team" || portalAccess === "agent") {
+  if (requestedPortal !== "customer") {
     throw new Error(
-      portalAccess === "agent"
-        ? "Agent accounts require approval from Shearwater."
-        : "Team accounts require an administrator invitation.",
+      "Only guest accounts can be activated here. Choose Customer Access when you sign up.",
     );
   }
 
   const admin = createAdminClient();
 
-  // Check if a membership already exists (avoid duplicates).
   const { data: existing } = await admin
     .from("access_memberships")
     .select("id, status")
     .eq("user_id", user.id)
-    .eq("access_type", portalAccess)
+    .eq("access_type", "customer")
     .maybeSingle();
 
   if (existing) {
-    // Membership exists but was somehow not resolved — just redirect.
-    redirect("/customer");
+    redirect("/auth/continue");
   }
 
-  // Create the membership.
   const { error: insertError } = await admin.from("access_memberships").insert({
     user_id: user.id,
     organization_id: null,
@@ -59,5 +51,56 @@ export async function activateSelfMembership() {
 
   if (insertError) throw new Error(insertError.message);
 
-  redirect("/customer");
+  redirect("/auth/continue");
+}
+
+/**
+ * Agent access request — creates an invited membership for admin approval.
+ */
+export async function requestAgentAccess() {
+  const user = await requireUser();
+  const requestedPortal = user.user_metadata?.portal_access;
+
+  if (requestedPortal !== "agent") {
+    throw new Error(
+      "Only travel-agent sign-ups can request Agent Access here.",
+    );
+  }
+
+  const admin = createAdminClient();
+  const organizationId = await getOperatingOrganizationId();
+  if (!organizationId) {
+    throw new Error("Shearwater organization is not configured.");
+  }
+
+  const { data: existing } = await admin
+    .from("access_memberships")
+    .select("id, status, access_type")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (existing?.access_type === "agent" && existing.status === "active") {
+    redirect("/auth/continue");
+  }
+
+  if (existing?.access_type === "agent") {
+    redirect("/access-pending");
+  }
+
+  if (existing) {
+    throw new Error(
+      "This account already has a different access type. Contact Shearwater support to switch to Agent Access.",
+    );
+  }
+
+  const { error: insertError } = await admin.from("access_memberships").insert({
+    user_id: user.id,
+    organization_id: organizationId,
+    access_type: "agent",
+    status: "invited",
+  });
+
+  if (insertError) throw new Error(insertError.message);
+
+  redirect("/access-pending");
 }

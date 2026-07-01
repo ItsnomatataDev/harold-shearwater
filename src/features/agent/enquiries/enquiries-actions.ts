@@ -15,6 +15,19 @@ const enquirySchema = z.object({
   productInterest: z.string().trim().max(200).optional(),
   requestedDate: z.string().optional(),
   notes: z.string().trim().max(2000).optional(),
+  status: z
+    .enum([
+      "new",
+      "qualifying",
+      "quote_requested",
+      "quoted",
+      "reservation_requested",
+      "on_hold",
+      "confirmed",
+      "complete",
+      "cancelled",
+    ])
+    .optional(),
 });
 
 export async function addAgentEnquiry(organizationId: string, input: unknown) {
@@ -38,6 +51,7 @@ export async function addAgentEnquiry(organizationId: string, input: unknown) {
       product_interest: parsed.productInterest || null,
       requested_date: parsed.requestedDate || null,
       notes: parsed.notes || null,
+      status: parsed.status ?? "new",
     })
     .select("id")
     .single();
@@ -78,6 +92,8 @@ export async function addAgentEnquiry(organizationId: string, input: unknown) {
     throw new Error(eventError.message);
   }
   revalidatePath("/agent/enquiries");
+  revalidatePath("/team/bookings");
+  return { id: enquiryId, reference };
 }
 
 export async function updateEnquiryStatus(
@@ -90,6 +106,9 @@ export async function updateEnquiryStatus(
     throw new Error("Agent access is required.");
   }
   const supabase = await createClient();
+  if (status === "on_hold") {
+    throw new Error("Only the Shearwater team can place reservation holds.");
+  }
   if (status === "confirmed") {
     const { data: enquiry, error: readError } = await supabase
       .from("agent_enquiries")

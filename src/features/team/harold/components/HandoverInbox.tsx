@@ -21,10 +21,12 @@ export function HandoverInbox({
   organizationId,
   currentMembershipId,
   conversations,
+  initialHandoverId,
 }: {
   organizationId: string;
   currentMembershipId: string;
   conversations: HandoverConversation[];
+  initialHandoverId?: string | null;
 }) {
   const router = useRouter();
   const [view, setView] = useState<"active" | "resolved">("active");
@@ -33,7 +35,11 @@ export function HandoverInbox({
       ? conversation.status === "resolved"
       : conversation.status !== "resolved",
   );
-  const [selectedId, setSelectedId] = useState(visible[0]?.id ?? "");
+  const [selectedId, setSelectedId] = useState(
+    initialHandoverId && conversations.some((c) => c.id === initialHandoverId)
+      ? initialHandoverId
+      : (visible[0]?.id ?? ""),
+  );
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const selected =
@@ -134,7 +140,10 @@ export function HandoverInbox({
                 {conversation.title}
               </span>
               <span className="mt-2 block text-[9px] text-[#60605b]">
-                {formatTime(conversation.updatedAt)} · {conversation.sourceAccess}
+                {formatTime(conversation.updatedAt)} · {conversation.domainLabel}
+                {conversation.keyAccountAssistantName
+                  ? ` · ${conversation.keyAccountAssistantName}`
+                  : ""}
               </span>
             </button>
           ))}
@@ -155,7 +164,7 @@ export function HandoverInbox({
             <header className="flex flex-wrap items-start justify-between gap-4 border-b border-[#343431] p-5">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-[.12em] text-victoria">
-                  {selected.sourceAccess} access · {selected.requesterEmail}
+                  {selected.domainLabel} · {selected.sourceAccess} access
                 </p>
                 <h2 className="mt-2 text-lg font-semibold text-white">
                   {selected.requesterName}
@@ -166,11 +175,20 @@ export function HandoverInbox({
                     Reason: {selected.handoverReason}
                   </p>
                 )}
+                {selected.keyAccountAssistantName && (
+                  <p className="mt-2 rounded-lg border border-gold/20 bg-gold/5 px-3 py-2 text-[10px] leading-5 text-[#c9b26a]">
+                    <span className="font-semibold text-gold">Key account assistant:</span>{" "}
+                    {selected.keyAccountAssistantName}
+                    {selected.keyAccountTeamMembershipId === currentMembershipId
+                      ? " — this handover was routed to you."
+                      : " has been notified."}
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 {selected.status === "handover_requested" && (
                   <button
-                    disabled={pending}
+                    disabled={pending || !selected.canClaim}
                     onClick={() =>
                       run(() =>
                         claimHandover(organizationId, {
@@ -178,15 +196,30 @@ export function HandoverInbox({
                         }),
                       )
                     }
-                    className="rounded-xl bg-savannah px-4 py-2.5 text-xs font-semibold text-[#102018] disabled:opacity-50"
+                    className={`rounded-xl px-4 py-2.5 text-xs font-semibold disabled:opacity-50 ${
+                      selected.keyAccountTeamMembershipId === currentMembershipId
+                        ? "bg-gold text-black"
+                        : "bg-savannah text-[#102018]"
+                    }`}
                   >
-                    Take over conversation
+                    {selected.keyAccountTeamMembershipId === currentMembershipId
+                      ? "Take over as key account"
+                      : selected.canClaim
+                        ? "Take over conversation"
+                        : "Not in your skill area"}
                   </button>
                 )}
                 {selected.status === "human_active" &&
                   selected.assignedToMembershipId === currentMembershipId && (
                     <>
-                      {selected.chatConversationId && <Link href={`/team/chat?conversation=${selected.chatConversationId}`} className="rounded-xl bg-savannah px-4 py-2.5 text-xs font-semibold text-[#102018]">Continue in Chat</Link>}
+                      {selected.chatConversationId && (
+                        <Link
+                          href={`/team/chat?conversation=${selected.chatConversationId}`}
+                          className="rounded-xl bg-savannah px-4 py-2.5 text-xs font-semibold text-[#102018]"
+                        >
+                          Continue in Chat
+                        </Link>
+                      )}
                       <button disabled={pending} onClick={() => run(() => resolveHandover(organizationId, { conversationId: selected.id }))} className="rounded-xl border border-[#444] px-4 py-2.5 text-xs font-semibold text-[#bbb] disabled:opacity-50">Resolve</button>
                     </>
                   )}

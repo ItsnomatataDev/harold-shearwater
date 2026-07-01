@@ -50,10 +50,17 @@ export function InviteMemberForm({
 
   return (
     <div className="space-y-5">
+    <div className="rounded-2xl border border-[#343431] bg-[#151513] px-4 py-3 text-xs leading-5 text-[#8d8d87]">
+      <p className="font-semibold text-[#d0d0c9]">Team Access invitations only</p>
+      <p className="mt-1">
+        Use this to invite internal staff to Team Access. Guests and travel agents
+        sign up on the login page — they are not invited here.
+      </p>
+    </div>
     <div className="rounded-2xl border border-[#343431] bg-[#1d1d1b] p-6">
       {!canManageMembers ? (
         <div className="rounded-xl border border-[#343431] bg-[#232321] px-4 py-3 text-xs text-[#8a8a84]">
-          Only admins can invite team members.
+          Only admins can invite Team Access members.
         </div>
       ) : !open ? (
         <button
@@ -61,7 +68,7 @@ export function InviteMemberForm({
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-sunset px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#f0674e]"
         >
           <Icon name="plus" className="h-4 w-4" />
-          Invite team member
+          Invite Team Access member
         </button>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -106,14 +113,14 @@ export function InviteMemberForm({
               {message}
             </div>
           )}
-          {acceptanceUrl && <div className="rounded-xl border border-victoria/30 bg-victoria/5 p-3"><p className="text-[10px] font-semibold uppercase tracking-wider text-victoria">Secure acceptance link</p><p className="mt-2 text-[10px] leading-5 text-[#8db7c6]">The invited person must open this while signed in with the invited email. New users should normally use the Supabase invitation email first.</p><p className="mt-2 break-all text-[10px] leading-5 text-[#9bc9da]">{acceptanceUrl}</p><button type="button" onClick={() => navigator.clipboard.writeText(acceptanceUrl)} className="mt-2 rounded-lg border border-victoria/30 px-3 py-1.5 text-[10px] font-semibold text-victoria">Copy link</button></div>}
+          {acceptanceUrl && <div className="rounded-xl border border-victoria/30 bg-victoria/5 p-3"><p className="text-[10px] font-semibold uppercase tracking-wider text-victoria">Secure acceptance link</p><p className="mt-2 text-[10px] leading-5 text-[#8db7c6]">The invited person opens this link to create their account with the invited email and password. They cannot change the email address, and the link expires in 3 minutes.</p><p className="mt-2 break-all text-[10px] leading-5 text-[#9bc9da]">{acceptanceUrl}</p><button type="button" onClick={() => navigator.clipboard.writeText(acceptanceUrl)} className="mt-2 rounded-lg border border-victoria/30 px-3 py-1.5 text-[10px] font-semibold text-victoria">Copy link</button></div>}
           <div className="flex gap-2">
             <button
               type="submit"
               disabled={loading}
               className="flex-1 rounded-xl bg-sunset px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-[#f0674e] disabled:opacity-60"
             >
-              {loading ? "Sending…" : "Send invitation"}
+              {loading ? "Sending…" : "Send team invitation"}
             </button>
             <button
               type="button"
@@ -126,7 +133,7 @@ export function InviteMemberForm({
         </form>
       )}
     </div>
-    {pendingInvitations.length > 0 && <div className="overflow-hidden rounded-2xl border border-[#343431] bg-[#1d1d1b]"><div className="border-b border-[#343431] px-5 py-4"><h2 className="text-base font-semibold text-white">Pending invitations ({pendingInvitations.length})</h2></div><div className="divide-y divide-[#30302d]">{pendingInvitations.map((invitation) => <div key={invitation.id} className="flex flex-col justify-between gap-3 px-5 py-4 sm:flex-row sm:items-center"><div><p className="text-sm font-semibold text-[#e1e1db]">{invitation.email}</p><p className="mt-1 text-xs text-[#777]">{invitation.roleName} · expires {new Date(invitation.expiresAt).toLocaleDateString()}</p></div>{canManageMembers && <button disabled={loading} onClick={async () => { setLoading(true); try { await revokeTeamInvitation(organizationId, { invitationId: invitation.id }); router.refresh(); } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to revoke invitation."); } finally { setLoading(false); } }} className="rounded-lg border border-sunset/30 px-3 py-2 text-xs font-semibold text-sunset">Revoke</button>}</div>)}</div></div>}
+    {pendingInvitations.length > 0 && <div className="overflow-hidden rounded-2xl border border-[#343431] bg-[#1d1d1b]"><div className="border-b border-[#343431] px-5 py-4"><h2 className="text-base font-semibold text-white">Pending Team Access invitations ({pendingInvitations.length})</h2><p className="mt-1 text-xs text-[#777]">Waiting for the invited staff member to accept. Links expire after 3 minutes.</p></div><div className="divide-y divide-[#30302d]">{pendingInvitations.map((invitation) => <div key={invitation.id} className="flex flex-col justify-between gap-3 px-5 py-4 sm:flex-row sm:items-center"><div><p className="text-sm font-semibold text-[#e1e1db]">{invitation.email}</p><p className="mt-1 text-xs text-[#777]">{invitation.roleName} · expires {new Date(invitation.expiresAt).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p></div>{canManageMembers && <button disabled={loading} onClick={async () => { setLoading(true); try { await revokeTeamInvitation(organizationId, { invitationId: invitation.id }); router.refresh(); } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to revoke invitation."); } finally { setLoading(false); } }} className="rounded-lg border border-sunset/30 px-3 py-2 text-xs font-semibold text-sunset">Revoke</button>}</div>)}</div></div>}
     </div>
   );
 }

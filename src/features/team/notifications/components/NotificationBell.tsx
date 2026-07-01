@@ -62,6 +62,12 @@ export function NotificationBell({
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
+    setUnreadCount(initialUnreadCount);
+    setNotifications(initialNotifications);
+    knownIds.current = new Set(initialNotifications.map((item) => item.id));
+  }, [initialUnreadCount, initialNotifications]);
+
+  useEffect(() => {
     function receiveRealtimeNotification(event: Event) {
       const detail = (event as CustomEvent<NotificationRealtimeDetail>).detail;
       const notification = detail.notification;

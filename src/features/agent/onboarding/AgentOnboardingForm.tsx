@@ -44,10 +44,11 @@ export function AgentOnboardingForm({ name }: { name: string }) {
             Agent Portal
           </p>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white">
-            Set up your agent account
+            Set up your travel agency
           </h1>
           <p className="mt-2 text-sm text-[#888]">
-            Tell us a bit about your agency to complete your profile.
+            Agent Access is for travel companies and tour operators — not individual
+            guests. Tell us about your agency to complete your company profile.
           </p>
         </div>
 

@@ -17,17 +17,22 @@ import type {
 import type { Product } from "@/features/products/products-service";
 import { Icon } from "@/components/Icon";
 import SectionHeader from "@/components/SectionHeader";
+import { CatalogApiNotice } from "@/components/catalog/CatalogApiNotice";
 
 export default function TeamRatePlanDetailPage({
   plan,
   products,
   agents,
   assignments,
+  canManage = false,
+  basePath = "/team/products/rates",
 }: {
   plan: RatePlanWithItems;
   products: Product[];
   agents: AgentRateAccount[];
   assignments: AgencyAssignment[];
+  canManage?: boolean;
+  basePath?: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -42,19 +47,22 @@ export default function TeamRatePlanDetailPage({
 
   return (
     <div className="shell-content">
+      <CatalogApiNotice resourceLabel="Agency rate plans" />
       <SectionHeader
         title={plan.name}
-        subtitle={plan.description ?? "Rate plan pricing"}
+        subtitle={plan.description ?? "API-synced rate plan pricing"}
         action={
           <div className="flex gap-3">
-            <button
-              onClick={() => setAddOpen(true)}
-              className="btn-primary flex items-center gap-2"
-            >
-              <Icon name="plus" className="w-4 h-4" />
-              Add Item
-            </button>
-            <Link href="/admin/products/rates" className="btn-ghost text-sm">
+            {canManage && (
+              <button
+                onClick={() => setAddOpen(true)}
+                className="btn-primary flex items-center gap-2"
+              >
+                <Icon name="plus" className="w-4 h-4" />
+                Add Item
+              </button>
+            )}
+            <Link href={basePath} className="btn-ghost text-sm">
               ← Rate Plans
             </Link>
           </div>
@@ -72,36 +80,40 @@ export default function TeamRatePlanDetailPage({
           <div>
             <h2 className="text-sm font-semibold text-white">Agent assignments</h2>
             <p className="mt-1 text-xs text-zinc-500">
-              Only assigned agents can see this contracted rate plan.
+              {canManage
+                ? "Only assigned agents can see this contracted rate plan."
+                : "Agency assignments are synced from the integration API via agencyExternalIds."}
             </p>
           </div>
-          <form
-            className="flex gap-2"
-            onSubmit={(event) => {
-              event.preventDefault();
-              const membershipId = String(new FormData(event.currentTarget).get("membershipId") ?? "");
-              if (!membershipId) return;
-              startTransition(async () => {
-                const result = await assignRatePlanToAgency(membershipId, plan.id);
-                if (result.error) setError(result.error);
-                else router.refresh();
-              });
-            }}
-          >
-            <select name="membershipId" required className="input min-w-56 text-xs">
-              <option value="">Select an agent</option>
-              {agents
-                .filter((agent) => !assignments.some((assignment) => assignment.membership_id === agent.membershipId))
-                .map((agent) => (
-                  <option key={agent.membershipId} value={agent.membershipId}>
-                    {agent.agencyName} — {agent.name}
-                  </option>
-                ))}
-            </select>
-            <button disabled={pending} className="rounded-lg bg-gold px-4 text-xs font-semibold text-black disabled:opacity-40">
-              Assign
-            </button>
-          </form>
+          {canManage && (
+            <form
+              className="flex gap-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const membershipId = String(new FormData(event.currentTarget).get("membershipId") ?? "");
+                if (!membershipId) return;
+                startTransition(async () => {
+                  const result = await assignRatePlanToAgency(membershipId, plan.id);
+                  if (result.error) setError(result.error);
+                  else router.refresh();
+                });
+              }}
+            >
+              <select name="membershipId" required className="input min-w-56 text-xs">
+                <option value="">Select an agent</option>
+                {agents
+                  .filter((agent) => !assignments.some((assignment) => assignment.membership_id === agent.membershipId))
+                  .map((agent) => (
+                    <option key={agent.membershipId} value={agent.membershipId}>
+                      {agent.agencyName} — {agent.name}
+                    </option>
+                  ))}
+              </select>
+              <button disabled={pending} className="rounded-lg bg-gold px-4 text-xs font-semibold text-black disabled:opacity-40">
+                Assign
+              </button>
+            </form>
+          )}
         </div>
         {assignments.length ? (
           <ul className="mt-4 divide-y divide-zinc-800 border-t border-zinc-800">
@@ -113,37 +125,41 @@ export default function TeamRatePlanDetailPage({
                     <p className="text-xs font-semibold text-white">{agent?.agencyName ?? "Agent agency"}</p>
                     <p className="mt-0.5 text-[10px] text-zinc-500">{agent?.name ?? assignment.membership_id}</p>
                   </div>
-                  <button
-                    disabled={pending}
-                    onClick={() =>
-                      startTransition(async () => {
-                        const result = await removeRatePlanAssignment(assignment.id);
-                        if (result.error) setError(result.error);
-                        else router.refresh();
-                      })
-                    }
-                    className="text-xs text-zinc-500 hover:text-red-400 disabled:opacity-40"
-                  >
-                    Remove
-                  </button>
+                  {canManage && (
+                    <button
+                      disabled={pending}
+                      onClick={() =>
+                        startTransition(async () => {
+                          const result = await removeRatePlanAssignment(assignment.id);
+                          if (result.error) setError(result.error);
+                          else router.refresh();
+                        })
+                      }
+                      className="text-xs text-zinc-500 hover:text-red-400 disabled:opacity-40"
+                    >
+                      Remove
+                    </button>
+                  )}
                 </li>
               );
             })}
           </ul>
         ) : (
-          <p className="mt-4 border-t border-zinc-800 pt-4 text-xs text-zinc-500">No agents assigned yet.</p>
+          <p className="mt-4 border-t border-zinc-800 pt-4 text-xs text-zinc-500">
+            No agent companies assigned yet.
+          </p>
         )}
       </section>
 
       {plan.items.length === 0 ? (
         <div className="text-center py-16 text-zinc-500">
           <Icon name="dollar" className="w-10 h-10 mx-auto mb-3 opacity-40" />
-          <p className="text-sm">
-            No pricing items yet. Add products with their prices.
-          </p>
-          <button onClick={() => setAddOpen(true)} className="btn-primary mt-4">
-            Add first item
-          </button>
+          <p className="text-sm">No pricing items synced for this rate plan yet.</p>
+          {canManage && (
+            <button onClick={() => setAddOpen(true)} className="btn-primary mt-4">
+              Add first item
+            </button>
+          )}
         </div>
       ) : (
         <div className="rounded-xl border border-zinc-800 overflow-hidden">
@@ -176,13 +192,15 @@ export default function TeamRatePlanDetailPage({
                   </td>
                   <td className="px-4 py-3 text-zinc-400">{item.currency}</td>
                   <td className="px-4 py-3 text-right">
-                    <form
-                      action={deleteRatePlanItem.bind(null, plan.id, item.id)}
-                    >
-                      <button className="text-zinc-600 hover:text-red-400 transition-colors">
-                        <Icon name="trash" className="w-4 h-4" />
-                      </button>
-                    </form>
+                    {canManage && (
+                      <form
+                        action={deleteRatePlanItem.bind(null, plan.id, item.id)}
+                      >
+                        <button className="text-zinc-600 hover:text-red-400 transition-colors">
+                          <Icon name="trash" className="w-4 h-4" />
+                        </button>
+                      </form>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -191,7 +209,7 @@ export default function TeamRatePlanDetailPage({
         </div>
       )}
 
-      {addOpen && (
+      {addOpen && canManage && (
         <div
           className="fixed inset-0 bg-black/60 z-50 flex justify-end"
           onClick={() => setAddOpen(false)}

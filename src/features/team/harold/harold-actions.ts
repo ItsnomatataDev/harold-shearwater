@@ -10,6 +10,12 @@ import {
   sendToHaroldWebhook,
 } from "./harold-webhook";
 import type { HaroldConversationStatus, HaroldMessage } from "./harold-service";
+import { inferHandoverDomain } from "./handover-routing";
+import {
+  applyHaroldHandover,
+  replyImpliesHandover,
+} from "./harold-handover";
+import { augmentHaroldModuleWithAvailability } from "@/features/harold/harold-availability-context";
 
 const messageSchema = z.object({
   conversationId: z.string().uuid().optional(),
@@ -120,6 +126,15 @@ export async function sendHaroldMessage(
   if (historyResult.error) throw new Error(historyResult.error.message);
 
   try {
+    const moduleContext = await augmentHaroldModuleWithAvailability(
+      {
+        id: "team_harold",
+        label: "Team Harold Chat",
+        summary: "Team member is chatting with Harold.",
+      },
+      parsed.message,
+    );
+
     const webhookResult = await sendToHaroldWebhook({
       conversationId,
       organizationId,
@@ -129,6 +144,7 @@ export async function sendHaroldMessage(
         name: team.context.fullName,
         access: "team",
       },
+      module: moduleContext,
       message: {
         id: userMessage.id,
         content: userMessage.content,
@@ -165,50 +181,37 @@ export async function sendHaroldMessage(
       });
     }
 
-    if (webhookResult.handover) {
-      const reason =
-        webhookResult.handoverReason ?? "Harold requested human assistance.";
-      const { error } = await admin
-        .from("harold_conversations")
-        .update({
-          status: "handover_requested",
-          handover_requested_at: new Date().toISOString(),
-          handover_requested_by: "ai",
-          handover_reason: reason,
-          assigned_to_membership_id: null,
-          resolved_at: null,
-        })
-        .eq("id", conversationId)
-        .eq("organization_id", organizationId);
-      if (error) throw new Error(error.message);
-      status = "handover_requested";
+    const shouldHandover =
+      webhookResult.handover || replyImpliesHandover(webhookResult.reply);
 
-      if (!webhookResult.reply) {
-        const { data, error: systemError } = await admin
-          .from("harold_messages")
-          .insert({
-            conversation_id: conversationId,
-            role: "system",
-            content:
-              "I've passed this conversation to the Shearwater team. Someone will be with you shortly — they'll have full context of everything we've discussed.",
-            metadata: { reason },
-          })
-          .select("id,created_at")
-          .single();
-        if (systemError) throw new Error(systemError.message);
+    if (shouldHandover) {
+      const reason =
+        webhookResult.handoverReason ??
+        "Harold requested human assistance.";
+      const systemRow = await applyHaroldHandover(admin, {
+        conversationId,
+        organizationId,
+        sourceAccess: "team",
+        reason,
+        userMessage: parsed.message,
+        webhookDomain: webhookResult.handoverDomain,
+        includeSystemMessage: !webhookResult.reply,
+      });
+      status = "handover_requested";
+      if (systemRow) {
         responseMessages.push({
-          id: data.id,
+          id: systemRow.id,
           conversationId,
           role: "system",
           content:
-            "Harold has requested assistance from a Shearwater team member.",
+            "Harold has handed this conversation to the Shearwater team.",
           authorName: "System",
-          createdAt: data.created_at,
+          createdAt: systemRow.created_at,
         });
       }
     }
 
-    if (!webhookResult.reply && !webhookResult.handover) {
+    if (!webhookResult.reply && !shouldHandover) {
       return {
         conversationId,
         messages: [userMessage],
@@ -245,9 +248,14 @@ export async function requestHumanHandover(
   const parsed = handoverSchema.parse(input);
   await guardOrganization(organizationId);
   const supabase = await createClient();
-  const { error } = await supabase.rpc("request_harold_handover", {
+  const handoverDomain = inferHandoverDomain({
+    sourceAccess: "team",
+    reason: parsed.reason,
+  });
+  const { error } = await (supabase as any).rpc("request_harold_handover", {
     target_conversation_id: parsed.conversationId,
     requested_reason: parsed.reason,
+    requested_domain: handoverDomain,
   });
   if (error) throw new Error(error.message);
 

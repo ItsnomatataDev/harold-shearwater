@@ -17,6 +17,8 @@ import type {
   AgentEnquiryFollowup,
   EnquiryStatus,
 } from "./enquiries-service";
+import { ReservationHoldBanner } from "@/features/booking/ReservationHoldBanner";
+import { GoldenDuskBookingSummary } from "@/features/agent/golden-dusk/GoldenDuskBookingSummary";
 
 const STATUSES: { value: EnquiryStatus; label: string }[] = [
   { value: "new", label: "New enquiry" },
@@ -24,6 +26,7 @@ const STATUSES: { value: EnquiryStatus; label: string }[] = [
   { value: "quote_requested", label: "Quote requested" },
   { value: "quoted", label: "Quoted" },
   { value: "reservation_requested", label: "Reservation requested" },
+  { value: "on_hold", label: "On hold (72h)" },
   { value: "confirmed", label: "Confirmed externally" },
   { value: "complete", label: "Travel completed" },
   { value: "cancelled", label: "Cancelled" },
@@ -96,7 +99,7 @@ export function AgentEnquiryDetailPage({
         </div>
         <select
           value={enquiry.status}
-          disabled={pending}
+          disabled={pending || enquiry.status === "on_hold"}
           onChange={(event) =>
             run(() =>
               updateEnquiryStatus(
@@ -116,6 +119,17 @@ export function AgentEnquiryDetailPage({
           ))}
         </select>
       </header>
+
+      <ReservationHoldBanner
+        holdExpiresAt={enquiry.holdExpiresAt}
+        status={enquiry.status}
+      />
+
+      <GoldenDuskBookingSummary
+        organizationId={organizationId}
+        enquiry={enquiry}
+        audience="agent"
+      />
 
       {error ? (
         <p className="rounded-xl border border-sunset/30 bg-sunset/10 px-4 py-3 text-xs text-[#f18a77]">

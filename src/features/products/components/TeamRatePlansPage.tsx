@@ -9,6 +9,7 @@ import {
 import type { RatePlan } from "@/features/products/rate-plans-service";
 import { Icon } from "@/components/Icon";
 import SectionHeader from "@/components/SectionHeader";
+import { CatalogApiNotice } from "@/components/catalog/CatalogApiNotice";
 
 const TYPE_LABELS: Record<string, string> = {
   public: "Public",
@@ -28,25 +29,32 @@ const TYPE_COLORS: Record<string, string> = {
 
 export default function TeamRatePlansPage({
   plans,
+  canManage = false,
+  basePath = "/team/products/rates",
 }: {
   plans: RatePlan[];
+  canManage?: boolean;
+  basePath?: string;
 }) {
   const [showAdd, setShowAdd] = useState(false);
   const [formState, formAction, isPending] = useActionState(addRatePlan, {});
 
   return (
     <div className="shell-content">
+      <CatalogApiNotice resourceLabel="Agency rate plans" />
       <SectionHeader
         title="Rate Plans"
-        subtitle="Control pricing for public, agent and agency-specific bookings."
+        subtitle="Read-only agency and public pricing synced from the integration API."
         action={
-          <button
-            onClick={() => setShowAdd(true)}
-            className="btn-primary flex items-center gap-2"
-          >
-            <Icon name="plus" className="w-4 h-4" />
-            New Rate Plan
-          </button>
+          canManage ? (
+            <button
+              onClick={() => setShowAdd(true)}
+              className="btn-primary flex items-center gap-2"
+            >
+              <Icon name="plus" className="w-4 h-4" />
+              New Rate Plan
+            </button>
+          ) : undefined
         }
       />
 
@@ -95,21 +103,23 @@ export default function TeamRatePlansPage({
                 )}
               </div>
               <div className="flex items-center gap-3 shrink-0">
-                <form
-                  action={toggleRatePlanActive.bind(
-                    null,
-                    plan.id,
-                    !plan.active,
-                  )}
-                >
-                  <button
-                    className={`text-xs ${plan.active ? "text-yellow-400 hover:text-yellow-300" : "text-emerald-400 hover:text-emerald-300"}`}
+                {canManage && (
+                  <form
+                    action={toggleRatePlanActive.bind(
+                      null,
+                      plan.id,
+                      !plan.active,
+                    )}
                   >
-                    {plan.active ? "Deactivate" : "Activate"}
-                  </button>
-                </form>
+                    <button
+                      className={`text-xs ${plan.active ? "text-yellow-400 hover:text-yellow-300" : "text-emerald-400 hover:text-emerald-300"}`}
+                    >
+                      {plan.active ? "Deactivate" : "Activate"}
+                    </button>
+                  </form>
+                )}
                 <Link
-                  href={`/admin/products/rates/${plan.id}`}
+                  href={`${basePath}/${plan.id}`}
                   className="btn-ghost text-sm"
                 >
                   Manage
@@ -120,7 +130,7 @@ export default function TeamRatePlansPage({
         </div>
       )}
 
-      {showAdd && (
+      {canManage && showAdd && (
         <div
           className="fixed inset-0 bg-black/60 z-50 flex justify-end"
           onClick={() => setShowAdd(false)}
@@ -147,7 +157,7 @@ export default function TeamRatePlansPage({
                   Rate plan created!
                 </p>
                 <Link
-                  href={`/admin/products/rates/${formState.planId}`}
+                  href={`${basePath}/${formState.planId}`}
                   className="btn-primary"
                   onClick={() => setShowAdd(false)}
                 >

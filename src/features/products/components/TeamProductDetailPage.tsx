@@ -12,6 +12,7 @@ import {
 import type { ProductWithDetails } from "@/features/products/products-service";
 import { Icon } from "@/components/Icon";
 import SectionHeader from "@/components/SectionHeader";
+import { CatalogApiNotice } from "@/components/catalog/CatalogApiNotice";
 
 const INCLUSION_COLORS: Record<string, string> = {
   included: "text-emerald-400",
@@ -36,8 +37,12 @@ function formatDuration(minutes: number | null): string {
 
 export default function TeamProductDetailPage({
   product,
+  canManage = false,
+  basePath = "/team/products",
 }: {
   product: ProductWithDetails;
+  canManage?: boolean;
+  basePath?: string;
 }) {
   const [addVariantOpen, setAddVariantOpen] = useState(false);
   const [addInclusionOpen, setAddInclusionOpen] = useState(false);
@@ -57,6 +62,7 @@ export default function TeamProductDetailPage({
 
   return (
     <div className="shell-content">
+      <CatalogApiNotice />
       <SectionHeader
         title={product.name}
         subtitle={`${product.category.replace("_", " ")} · ${formatDuration(product.duration_minutes)}`}
@@ -73,19 +79,19 @@ export default function TeamProductDetailPage({
             >
               {product.status}
             </span>
-            {product.status === "draft" && (
+            {canManage && product.status === "draft" && (
               <form action={setProductStatus.bind(null, product.id, "active")}>
                 <button className="btn-primary text-sm">Publish</button>
               </form>
             )}
-            {product.status === "active" && (
+            {canManage && product.status === "active" && (
               <form action={setProductStatus.bind(null, product.id, "draft")}>
                 <button className="text-sm text-yellow-400 hover:text-yellow-300">
                   Unpublish
                 </button>
               </form>
             )}
-            <Link href="/admin/products" className="btn-ghost text-sm">
+            <Link href={basePath} className="btn-ghost text-sm">
               ← Products
             </Link>
           </div>
@@ -133,18 +139,19 @@ export default function TeamProductDetailPage({
         <div className="bg-[#1a1a18] rounded-xl border border-zinc-800 p-5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-white">Variants</h3>
-            <button
-              onClick={() => setAddVariantOpen(true)}
-              className="text-xs text-[var(--color-sunset)] hover:opacity-80"
-            >
-              + Add
-            </button>
+            {canManage && (
+              <button
+                onClick={() => setAddVariantOpen(true)}
+                className="text-xs text-sunset hover:opacity-80"
+              >
+                + Add
+              </button>
+            )}
           </div>
 
           {product.variants.length === 0 ? (
             <p className="text-sm text-zinc-500">
-              No variants yet. Add variants to differentiate pricing options
-              (e.g. &ldquo;Standard&rdquo;, &ldquo;Premium&rdquo;).
+              No variants synced for this product yet.
             </p>
           ) : (
             <ul className="space-y-2">
@@ -159,19 +166,21 @@ export default function TeamProductDetailPage({
                       <p className="text-xs text-zinc-500">{v.description}</p>
                     )}
                   </div>
-                  <form
-                    action={deleteProductVariant.bind(null, product.id, v.id)}
-                  >
-                    <button className="text-zinc-600 hover:text-red-400 transition-colors">
-                      <Icon name="trash" className="w-4 h-4" />
-                    </button>
-                  </form>
+                  {canManage && (
+                    <form
+                      action={deleteProductVariant.bind(null, product.id, v.id)}
+                    >
+                      <button className="text-zinc-600 hover:text-red-400 transition-colors">
+                        <Icon name="trash" className="w-4 h-4" />
+                      </button>
+                    </form>
+                  )}
                 </li>
               ))}
             </ul>
           )}
 
-          {addVariantOpen && (
+          {addVariantOpen && canManage && (
             <form
               action={handleAddVariant}
               className="mt-4 space-y-2 pt-4 border-t border-zinc-800"
@@ -209,12 +218,14 @@ export default function TeamProductDetailPage({
             <h3 className="text-sm font-semibold text-white">
               What&apos;s Included
             </h3>
-            <button
-              onClick={() => setAddInclusionOpen(true)}
-              className="text-xs text-[var(--color-sunset)] hover:opacity-80"
-            >
-              + Add
-            </button>
+            {canManage && (
+              <button
+                onClick={() => setAddInclusionOpen(true)}
+                className="text-xs text-sunset hover:opacity-80"
+              >
+                + Add
+              </button>
+            )}
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -257,17 +268,19 @@ export default function TeamProductDetailPage({
                           <span className="text-xs text-zinc-300 flex-1">
                             {inc.label}
                           </span>
-                          <form
-                            action={deleteProductInclusion.bind(
-                              null,
-                              product.id,
-                              inc.id,
-                            )}
-                          >
-                            <button className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-red-400 transition-all">
-                              <Icon name="x" className="w-3 h-3" />
-                            </button>
-                          </form>
+                          {canManage && (
+                            <form
+                              action={deleteProductInclusion.bind(
+                                null,
+                                product.id,
+                                inc.id,
+                              )}
+                            >
+                              <button className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-red-400 transition-all">
+                                <Icon name="x" className="w-3 h-3" />
+                              </button>
+                            </form>
+                          )}
                         </li>
                       ))}
                     </ul>
@@ -277,7 +290,7 @@ export default function TeamProductDetailPage({
             })}
           </div>
 
-          {addInclusionOpen && (
+          {addInclusionOpen && canManage && (
             <form
               action={handleAddInclusion}
               className="mt-5 pt-5 border-t border-zinc-800 flex flex-wrap gap-3 items-end"

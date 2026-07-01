@@ -1,0 +1,107 @@
+{
+  "name": "Harold — Live availability + portal context",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ef202b32-3c31-44c0-b1f1-d22a3ca0a724/chat",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [1936, 1376],
+      "id": "32e9c6aa-8e4a-402c-b3be-c622d14c119e",
+      "name": "Harold Webhook",
+      "webhookId": "dfe12bb2-eed2-433d-8b4f-15896ea28fc1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize webhook body (n8n may nest under .body or put fields at root)\nconst raw = $input.item.json;\nconst body = raw.body ?? raw;\n\nconst source = body.source ?? 'unknown';\nconst mode = body.mode ?? 'conversation';\nconst org = body.organization ?? {};\nconst user = body.user ?? {};\nconst message = body.message ?? {};\nconst module = body.module ?? null;\nconst history = Array.isArray(body.history) ? body.history : [];\n\n// Live data from the portal (v2.1 payload)\nconst liveAvailability =\n  body.module?.data?.liveAvailability ?? body.availability ?? null;\nconst assistantContext =\n  body.assistantContext ?? liveAvailability?.assistantBrief ?? '';\n\nconst moduleBlock = module\n  ? [\n      `Module: ${module.label ?? module.id}`,\n      module.summary ? `Screen: ${module.summary}` : null,\n      module.capabilities?.length\n        ? `Capabilities: ${module.capabilities.join('; ')}`\n        : null,\n      module.recordType\n        ? `Record: ${module.recordType}${module.recordId ? ` (${module.recordId})` : ''}`\n        : null,\n    ]\n      .filter(Boolean)\n      .join('\\n')\n  : 'No specific module — general portal assistance.';\n\nconst historyBlock = history.length\n  ? history\n      .slice(-10)\n      .map((entry) => `${entry.role}: ${entry.content}`)\n      .join('\\n')\n  : 'No prior messages in this thread.';\n\nconst availabilityRules = liveAvailability?.model\n  ? [\n      'LIVE AVAILABILITY RULES (authoritative):',\n      liveAvailability.model.explanation,\n      liveAvailability.model.bookingFlow,\n      'Can answer: ' + (liveAvailability.model.whatYouCanAnswer ?? []).join('; '),\n      'Cannot answer: ' + (liveAvailability.model.whatYouCannotAnswer ?? []).join('; '),\n    ].join('\\n')\n  : 'No live availability payload attached to this request.';\n\nconst ratesNote =\n  liveAvailability?.ratesAvailable === false\n    ? 'RATES: Not connected yet — never quote prices. Offer to hand over for pricing.'\n    : '';\n\nconst systemMessage = [\n  'You are Harold, the AI assistant for the Shearwater Victoria Falls operations platform.',\n  '',\n  'You MUST always respond with valid JSON in this exact format:',\n  '{',\n  '  \"reply\": \"your message to the user\",',\n  '  \"handover\": true or false,',\n  '  \"handoverReason\": \"brief reason\" or null',\n  '}',\n  '',\n  'Set handover to true when:',\n  '- The user asks to speak to a person or team member.',\n  '- Booking confirmation, payment, or pricing confirmation is requested.',\n  '- You do not have verified data to answer confidently.',\n  '- A safety, medical, legal or financial matter arises.',\n  '- The situation is emotionally sensitive.',\n  '',\n  'When handover is true, write a warm reply. For customers: explain you are connecting them with the team and they will have full context. For team/agents: keep it brief.',\n  '',\n  '--- AUTHORITATIVE LIVE DATA (use this; never invent) ---',\n  assistantContext || '(No assistant brief in payload)',\n  '',\n  availabilityRules,\n  ratesNote,\n  '',\n  '--- MODULE CONTEXT ---',\n  moduleBlock,\n  '',\n  '--- ACCESS TONE ---',\n  source === 'team_access'\n    ? 'TEAM: Professional, concise. Help with coordination, drafting, summaries.'\n    : source === 'agent_access'\n    ? 'AGENT: Commercial focus. Help with products, room TYPE availability, quotation prep. Never expose another agency data.'\n    : source === 'customer_access'\n    ? 'CUSTOMER: Warm, reassuring. Use first name when natural. Only approved information.'\n    : 'Match tone to the portal source.',\n  '',\n  'Absolute limits: Never confirm bookings, process payments, change rates, send external messages, delete records, or claim to be human.',\n  'Never invent room numbers (Room 101, 204, etc.). Counts are per room TYPE only.',\n].join('\\n');\n\nconst userPrompt = [\n  `Source: ${source}`,\n  `Mode: ${mode}`,\n  `Organization: ${org.name ?? 'Shearwater'}`,\n  `User: ${user.name ?? 'User'}`,\n  '',\n  'Recent conversation:',\n  historyBlock,\n  '',\n  'User message:',\n  message.content ?? '',\n].join('\\n');\n\nreturn [\n  {\n    json: {\n      systemMessage,\n      userPrompt,\n      source,\n      hasLiveAvailability: Boolean(liveAvailability),\n      availabilitySummary: liveAvailability?.summary ?? null,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2080, 1376],
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Prepare Harold Context"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.userPrompt }}",
+        "options": {
+          "systemMessage": "={{ $json.systemMessage }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [2288, 1376],
+      "id": "5a7c9440-7bc1-41a3-bf0c-0041da844be3",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\"type\":\"object\",\"properties\":{\"reply\":{\"type\":\"string\",\"description\":\"Your response message to the user\"},\"handover\":{\"type\":\"boolean\",\"description\":\"true if handing over to a human, false otherwise\"},\"handoverReason\":{\"type\":\"string\",\"description\":\"Short reason for handover, or null\"}},\"required\":[\"reply\",\"handover\"]}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [2448, 1616],
+      "id": "d69ba8b1-f199-42c9-a767-366d285e19f6",
+      "name": "Structured Output"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = items[0].json.output;\nconst parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;\n\nreturn [{\n  json: {\n    output: parsed.reply || '',\n    handover: Boolean(parsed.handover),\n    handoverReason: parsed.handoverReason || (parsed.handover ? 'Harold requested human assistance.' : null),\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2576, 1376],
+      "id": "5f59ece9-7df3-4707-a9ba-830a22bb83ff",
+      "name": "Structure Response"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [2160, 1584],
+      "id": "dd925acc-b5ca-4c10-b052-a7bd7989d84e",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "AMCuIhOcN1ffKYz9",
+          "name": "OpenAi account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Harold Webhook": {
+      "main": [[{ "node": "Prepare Harold Context", "type": "main", "index": 0 }]]
+    },
+    "Prepare Harold Context": {
+      "main": [[{ "node": "AI Agent", "type": "main", "index": 0 }]]
+    },
+    "AI Agent": {
+      "main": [[{ "node": "Structure Response", "type": "main", "index": 0 }]]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [[{ "node": "AI Agent", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "Structured Output": {
+      "ai_outputParser": [[{ "node": "AI Agent", "type": "ai_outputParser", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

@@ -26,6 +26,7 @@ export interface HaroldConversation {
   status: HaroldConversationStatus;
   handoverReason: string | null;
   assignedToMembershipId: string | null;
+  chatConversationId: string | null;
   createdAt: string;
   updatedAt: string;
   messages: HaroldMessage[];
@@ -44,7 +45,7 @@ export async function getHaroldConversations(organizationId: string): Promise<{
   const { data: conversations, error } = await supabase
     .from("harold_conversations")
     .select(
-      "id,title,status,handover_reason,assigned_to_membership_id,created_at,updated_at",
+      "id,title,status,handover_reason,assigned_to_membership_id,chat_conversation_id,created_at,updated_at",
     )
     .eq("organization_id", organizationId)
     .eq("user_id", user.id)
@@ -91,6 +92,7 @@ export async function getHaroldConversations(organizationId: string): Promise<{
       status: conversation.status as HaroldConversationStatus,
       handoverReason: conversation.handover_reason,
       assignedToMembershipId: conversation.assigned_to_membership_id,
+      chatConversationId: conversation.chat_conversation_id,
       createdAt: conversation.created_at,
       updatedAt: conversation.updated_at,
       messages: (messages.data ?? [])

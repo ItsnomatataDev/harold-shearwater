@@ -29,6 +29,7 @@ const ActivateMemberSchema = z.object({
 
 const RevokeInvitationSchema = z.object({ invitationId: z.string().uuid() });
 const UpdateStaffSchema = z.object({ membershipId: z.string().uuid(), departmentId: z.string().uuid().nullable(), locationId: z.string().uuid().nullable(), managerMembershipId: z.string().uuid().nullable(), employeeNumber: z.string().trim().max(50).nullable(), jobTitle: z.string().trim().max(120).nullable(), teamIds: z.array(z.string().uuid()) });
+const TEAM_INVITATION_TTL_MS = 3 * 60 * 1000;
 
 async function logAudit(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -159,9 +160,7 @@ export async function inviteTeamMember(
 
   const rawToken = randomBytes(32).toString("hex");
   const storedHash = createHash("sha256").update(rawToken).digest("hex");
-  const expiresAt = new Date(
-    Date.now() + 7 * 24 * 60 * 60 * 1000,
-  ).toISOString();
+  const expiresAt = new Date(Date.now() + TEAM_INVITATION_TTL_MS).toISOString();
 
   const { data: invitation, error: inviteError } = await supabase
     .from("invitations")
@@ -183,20 +182,50 @@ export async function inviteTeamMember(
   const host = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host") || "localhost:3000";
   const protocol = requestHeaders.get("x-forwarded-proto") || (host.startsWith("localhost") ? "http" : "https");
   const origin = process.env.NEXT_PUBLIC_SITE_URL || `${protocol}://${host}`;
-  const next = `/auth/accept-invitation?token=${encodeURIComponent(rawToken)}`;
+  // Keep redirectTo simple so it matches Supabase's allowed redirect list.
+  // The invitation is resolved from invitation_id metadata after sign-in, so we
+  // no longer need to encode the token into the redirect URL.
   const callbackUrl = new URL("/auth/callback", origin);
-  callbackUrl.searchParams.set("next", next);
   const acceptanceUrl = new URL("/auth/accept-invitation", origin);
   acceptanceUrl.searchParams.set("token", rawToken);
 
+  const admin = createAdminClient();
   let emailSent = false;
-  let deliveryMessage = "Invitation link created. Share it securely with the invited person.";
+  let deliveryMessage =
+    "Invitation created. Copy the secure link below and send it to them — it expires in 3 minutes.";
+
   try {
-    const { error: deliveryError } = await createAdminClient().auth.admin.inviteUserByEmail(parsed.email, { redirectTo: callbackUrl.toString(), data: { invitation_id: invitation.id } });
-    if (!deliveryError) { emailSent = true; deliveryMessage = `Invitation email sent to ${parsed.email}.`; }
-    else if (!deliveryError.message.toLowerCase().includes("already")) deliveryMessage = `Invitation created, but email delivery failed: ${deliveryError.message}`;
+    const { error: deliveryError } = await admin.auth.admin.inviteUserByEmail(
+      parsed.email,
+      {
+        redirectTo: callbackUrl.toString(),
+        data: {
+          invitation_id: invitation.id,
+          portal_access: "team",
+        },
+      },
+    );
+
+    const deliveryText = deliveryError?.message?.toLowerCase() ?? "";
+
+    if (!deliveryError) {
+      emailSent = true;
+      // The default Supabase email service is rate-limited and may silently
+      // drop messages, so always surface the link as the reliable path.
+      deliveryMessage = `Invitation queued for ${parsed.email}. The built-in email service is rate-limited and may not deliver — if it doesn't arrive, copy the secure link below and send it directly. It expires in 3 minutes.`;
+    } else if (deliveryText.includes("already")) {
+      // User already exists — Supabase will not send an invite email to them.
+      deliveryMessage = `${parsed.email} already has an account. Copy the secure link below and send it to them — they can sign in and accept. It expires in 3 minutes.`;
+    } else if (deliveryText.includes("rate limit") || deliveryText.includes("rate_limit") || deliveryError.status === 429) {
+      console.error("Invitation email rate limited", deliveryError);
+      deliveryMessage = `Email rate limit reached on the default Supabase mailer (only a few sends per hour). Copy the secure link below and send it directly — it expires in 3 minutes.`;
+    } else {
+      console.error("Invitation email failed", deliveryError);
+      deliveryMessage = `Could not email ${parsed.email} (${deliveryError.message}). Copy the secure link below and send it directly.`;
+    }
   } catch (cause) {
-    deliveryMessage = `Invitation created, but email delivery is unavailable: ${cause instanceof Error ? cause.message : "Unknown delivery error"}`;
+    console.error("Invitation email threw", cause);
+    deliveryMessage = `Email delivery is unavailable (${cause instanceof Error ? cause.message : "unknown error"}). Copy the secure link below and send it directly.`;
   }
 
   await logAudit(

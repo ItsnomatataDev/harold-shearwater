@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { Icon, type IconName } from "@/components/Icon";
 import { SignOutButton } from "@/features/auth/components/SignOutButton";
+import { SwitchWorkspaceLink } from "@/features/auth/components/SwitchWorkspaceLink";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 export interface AdminShellUser {
@@ -24,8 +25,8 @@ const adminNavigation: Array<{
   { label: "Attendance Register", href: "/admin/attendance", icon: "clock" },
   { label: "Staff Management", href: "/admin/staff", icon: "crew" },
   { label: "Organization", href: "/admin/organization", icon: "route" },
-  { label: "Products", href: "/admin/products", icon: "package" },
-  { label: "Rate Plans", href: "/admin/products/rates", icon: "dollar" },
+  { label: "Catalog (API)", href: "/admin/products", icon: "package" },
+  { label: "Agency Rates (API)", href: "/admin/products/rates", icon: "dollar" },
 ];
 
 function AdminLogo() {
@@ -56,13 +57,24 @@ function AdminLogo() {
 export function AdminShell({
   children,
   user,
+  isPlatformAdmin,
+  showWorkspaceSwitch = false,
 }: {
   children: ReactNode;
   user: AdminShellUser;
+  isPlatformAdmin: boolean;
+  showWorkspaceSwitch?: boolean;
 }) {
   const pathname = usePathname();
   const currentPath = pathname ?? "";
   const [open, setOpen] = useState(false);
+  const navigation = isPlatformAdmin
+    ? [
+        ...adminNavigation.slice(0, 1),
+        { label: "All Users", href: "/admin/users", icon: "users" as IconName },
+        ...adminNavigation.slice(1),
+      ]
+    : adminNavigation;
 
   const isActive = (href: string) =>
     currentPath === href || currentPath.startsWith(`${href}/`);
@@ -78,9 +90,9 @@ export function AdminShell({
       )}
       <aside
         data-shell-sidebar
-        className={`fixed inset-y-0 left-0 z-50 flex w-70 flex-col border-r border-[#292927] bg-[#151514] px-4 py-5 transition-transform duration-300 lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
+        className={`fixed inset-y-0 left-0 z-50 flex w-70 flex-col overflow-hidden border-r border-[#292927] bg-[#151514] px-4 py-5 transition-transform duration-300 lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
       >
-        <div className="flex items-center justify-between px-2">
+        <div className="flex shrink-0 items-center justify-between px-2">
           <AdminLogo />
           <button
             aria-label="Close menu"
@@ -90,12 +102,12 @@ export function AdminShell({
             <Icon name="close" className="h-5 w-5" />
           </button>
         </div>
-        <div className="my-6 h-px bg-[#292927]" />
-        <p className="px-3 text-[10px] font-semibold uppercase tracking-[.18em] text-gold">
+        <div className="my-6 h-px shrink-0 bg-[#292927]" />
+        <p className="shrink-0 px-3 text-[10px] font-semibold uppercase tracking-[.18em] text-gold">
           Platform Control
         </p>
-        <nav className="mt-3 space-y-1">
-          {adminNavigation.map((item) => (
+        <nav className="mt-3 min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain pr-1">
+          {navigation.map((item) => (
             <Link
               key={item.label}
               href={item.href}
@@ -111,7 +123,12 @@ export function AdminShell({
           ))}
         </nav>
 
-        <div className="mt-auto rounded-2xl border border-[#343431] bg-[#1d1d1b] p-3">
+        <div className="mt-3 shrink-0 rounded-2xl border border-[#343431] bg-[#1d1d1b] p-3">
+          {showWorkspaceSwitch && (
+            <div className="mb-2 border-b border-[#343431] pb-2">
+              <SwitchWorkspaceLink compact />
+            </div>
+          )}
           <div className="flex items-center gap-3">
             <div className="grid h-9 w-9 place-items-center rounded-xl bg-earth text-xs font-bold text-white">
               {user.initials}

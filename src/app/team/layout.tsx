@@ -1,35 +1,42 @@
 import type { ReactNode } from "react";
-import { redirect } from "next/navigation";
 import { AppShell } from "@/layouts/AppShell";
-import { requireAccessContext } from "@/features/auth/services/auth-context";
-import { getNotificationSummary } from "@/features/team/notifications/notification-service";
+import { redirectIfMissingPortal, getAvailablePortals } from "@/features/auth/services/auth-routing";
+import {
+  canViewProducts,
+  canViewRates,
+} from "@/features/products/access";
 
 export default async function TeamLayout({
   children,
 }: {
   children: ReactNode;
 }) {
-  const team = await requireAccessContext("team");
-  if (!team) redirect("/auth/continue");
-  if (!team.membership.organizationId) redirect("/auth/continue");
-  const notificationSummary = await getNotificationSummary(
-    team.membership.organizationId,
-    team.context.userId,
-  );
+  const { context: team, membership } = await redirectIfMissingPortal("team");
+  const organizationId = membership.organizationId!;
+  const showWorkspaceSwitch = (await getAvailablePortals(team)).length > 1;
+
+  const [showProducts, showRates] = await Promise.all([
+    canViewProducts(organizationId),
+    canViewRates(organizationId),
+  ]);
 
   return (
     <AppShell
-      notifications={notificationSummary}
+      showWorkspaceSwitch={showWorkspaceSwitch}
       notificationScope={{
-        userId: team.context.userId,
-        organizationId: team.membership.organizationId,
+        userId: team.userId,
+        organizationId,
+      }}
+      workspaceModules={{
+        products: showProducts,
+        rates: showRates,
       }}
       user={{
-        name: team.context.fullName,
-        role: team.context.jobTitle,
-        initials: team.context.initials,
+        name: team.fullName,
+        role: team.jobTitle,
+        initials: team.initials,
         organization:
-          team.membership.organizationName ?? "Shearwater Victoria Falls",
+          membership.organizationName ?? "Shearwater Victoria Falls",
       }}
     >
       {children}

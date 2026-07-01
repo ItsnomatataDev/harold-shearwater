@@ -31,8 +31,8 @@ export interface AuthContext {
   avatarUrl: string | null;
   timezone: string;
   memberships: ActiveMembership[];
-  /** The portal the user selected during sign-up (from auth metadata). */
-  intendedPortal: AccessType;
+  /** The portal chosen at sign-up (from auth metadata), if any. */
+  intendedPortal: AccessType | null;
   /** Agent-specific: name of the agency from profile onboarding. */
   agencyName: string | null;
   /** Agent-specific: agency website from profile onboarding. */
@@ -45,13 +45,36 @@ export function getAccessHomePath(accessType: AccessType) {
   return "/customer";
 }
 
+const ADMIN_PORTAL_PERMISSIONS = [
+  "members.manage",
+  "roles.manage",
+  "audit.view",
+  "attendance.manage",
+  "organization.manage",
+] as const;
+
 const getAuthContextCached = cache(async (): Promise<AuthContext | null> => {
   const supabase = await createClient();
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-  if (userError || !user) return null;
+
+  const { data: claimsData, error: claimsError } =
+    await supabase.auth.getClaims();
+  const claims = claimsData?.claims;
+
+  let userId = claims?.sub as string | undefined;
+  let userMetadata =
+    (claims?.user_metadata as Record<string, unknown> | undefined) ?? {};
+  let claimEmail = typeof claims?.email === "string" ? claims.email : "";
+
+  if (claimsError || !userId) {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+    if (userError || !user) return null;
+    userId = user.id;
+    userMetadata = user.user_metadata ?? {};
+    claimEmail = user.email ?? "";
+  }
 
   const [{ data: profile }, { data: memberships, error: membershipError }] =
     await Promise.all([
@@ -60,14 +83,14 @@ const getAuthContextCached = cache(async (): Promise<AuthContext | null> => {
         .select(
           "first_name,last_name,email,job_title,phone,avatar_url,timezone,agency_name,website",
         )
-        .eq("id", user.id)
+        .eq("id", userId)
         .maybeSingle(),
       supabase
         .from("access_memberships")
         .select(
           "id,access_type,organization_id,primary_location_id,department_id,employee_number,organizations(name,slug),locations!primary_location_id(name),departments(name)",
         )
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .eq("status", "active"),
     ]);
 
@@ -78,20 +101,31 @@ const getAuthContextCached = cache(async (): Promise<AuthContext | null> => {
 
   const firstName =
     profile?.first_name?.trim() ||
-    user.user_metadata.first_name ||
+    (typeof userMetadata.first_name === "string"
+      ? userMetadata.first_name
+      : undefined) ||
     "Shearwater";
   const lastName =
-    profile?.last_name?.trim() || user.user_metadata.last_name || "User";
+    profile?.last_name?.trim() ||
+    (typeof userMetadata.last_name === "string"
+      ? userMetadata.last_name
+      : undefined) ||
+    "User";
   const fullName = `${firstName} ${lastName}`.trim();
   const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
 
-  const rawPortal = user.user_metadata?.portal_access as string | undefined;
-  const intendedPortal: AccessType =
-    rawPortal === "team" || rawPortal === "agent" ? rawPortal : "customer";
+  const rawPortal = userMetadata.portal_access as string | undefined;
+  const intendedPortal: AccessType | null =
+    rawPortal === "team" || rawPortal === "agent" || rawPortal === "customer"
+      ? rawPortal
+      : null;
 
   return {
-    userId: user.id,
-    email: profile?.email || user.email || "",
+    userId,
+    email:
+      profile?.email ||
+      claimEmail ||
+      "",
     firstName,
     lastName,
     fullName,
@@ -149,20 +183,46 @@ export async function requireAccessContext(accessType: AccessType) {
   return membership ? { context, membership } : null;
 }
 
-export async function hasTeamAdminAccess(membershipId: string) {
+type MembershipRoleRow = {
+  roles: {
+    key: string;
+    role_permissions: Array<{ permissions: { key: string } | null }> | null;
+  } | null;
+};
+
+async function getMembershipRoleRows(membershipId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("membership_roles")
-    .select("role_id,roles!inner(key)")
-    .eq("membership_id", membershipId)
-    .eq("roles.key", "team_admin")
-    .limit(1);
+    .select("roles!inner(key, role_permissions(permissions!inner(key)))")
+    .eq("membership_id", membershipId);
 
   if (error) {
     throw new Error(`Unable to verify admin access: ${error.message}`);
   }
 
-  return (data ?? []).length > 0;
+  return (data ?? []) as MembershipRoleRow[];
+}
+
+function membershipHasAdminPortalAccess(rows: MembershipRoleRow[]) {
+  const adminPermissions = new Set<string>(ADMIN_PORTAL_PERMISSIONS);
+
+  return rows.some((row) => {
+    const role = row.roles;
+    if (!role) return false;
+    if (role.key === "team_admin") return true;
+
+    return (role.role_permissions ?? []).some(
+      (entry) =>
+        entry.permissions?.key != null &&
+        adminPermissions.has(entry.permissions.key),
+    );
+  });
+}
+
+export async function hasTeamAdminAccess(membershipId: string) {
+  const rows = await getMembershipRoleRows(membershipId);
+  return rows.some((row) => row.roles?.key === "team_admin");
 }
 
 export async function hasOrganizationPermission(
@@ -268,36 +328,52 @@ export async function hasAdminPortalAccess() {
   const team = await requireTeamContext();
   if (!team || !team.membership.organizationId) return false;
 
-  const isTeamAdmin = await hasTeamAdminAccess(team.membership.id);
-  if (isTeamAdmin) return true;
+  const rows = await getMembershipRoleRows(team.membership.id);
+  return membershipHasAdminPortalAccess(rows);
+}
 
-  const [
-    canManageMembers,
-    canManageRoles,
-    canViewAudit,
-    canManageAttendance,
-    canManageOrganization,
-  ] = await Promise.all([
-    hasOrganizationPermission(team.membership.organizationId, "members.manage"),
-    hasOrganizationPermission(team.membership.organizationId, "roles.manage"),
-    hasOrganizationPermission(team.membership.organizationId, "audit.view"),
-    hasOrganizationPermission(
-      team.membership.organizationId,
-      "attendance.manage",
-    ),
-    hasOrganizationPermission(
-      team.membership.organizationId,
-      "organization.manage",
-    ),
+export interface AdminLayoutContext {
+  context: AuthContext;
+  membership: ActiveMembership;
+  isPlatformAdmin: boolean;
+}
+
+export async function requireAdminLayoutContext(): Promise<AdminLayoutContext | null> {
+  const team = await requireTeamContext();
+  if (!team || !team.membership.organizationId) return null;
+
+  const [roleRows, platformAdminResult] = await Promise.all([
+    getMembershipRoleRows(team.membership.id),
+    (await createClient()).rpc("is_platform_admin"),
   ]);
 
-  return (
-    canManageMembers ||
-    canManageRoles ||
-    canViewAudit ||
-    canManageAttendance ||
-    canManageOrganization
-  );
+  if (platformAdminResult.error) {
+    throw new Error(
+      `Unable to verify platform admin access: ${platformAdminResult.error.message}`,
+    );
+  }
+
+  const canAccess = membershipHasAdminPortalAccess(roleRows);
+  if (!canAccess) return null;
+
+  return {
+    ...team,
+    isPlatformAdmin: Boolean(platformAdminResult.data),
+  };
+}
+
+export async function hasPlatformAdminAccess() {
+  const context = await getAuthContext();
+  if (!context) return false;
+  const { data, error } = await (await createClient()).rpc("is_platform_admin");
+  if (error) throw new Error(`Unable to verify platform admin access: ${error.message}`);
+  return Boolean(data);
+}
+
+export async function requirePlatformAdminContext() {
+  const team = await requireTeamContext();
+  if (!team || !(await hasPlatformAdminAccess())) return null;
+  return team;
 }
 
 export async function requireAdminPortalContext() {

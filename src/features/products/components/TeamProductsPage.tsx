@@ -9,6 +9,8 @@ import {
 import type { Product } from "@/features/products/products-service";
 import { Icon } from "@/components/Icon";
 import SectionHeader from "@/components/SectionHeader";
+import { CatalogApiNotice } from "@/components/catalog/CatalogApiNotice";
+import { CatalogSyncFeed } from "@/components/catalog/CatalogSyncFeed";
 
 const CATEGORIES = [
   { value: "adventure", label: "Adventure" },
@@ -36,8 +38,30 @@ function formatDuration(minutes: number | null): string {
 
 export default function TeamProductsPage({
   products,
+  canManage = false,
+  basePath = "/team/products",
+  usage,
+  syncRuns = [],
 }: {
   products: Product[];
+  canManage?: boolean;
+  basePath?: string;
+  usage?: {
+    totalProducts: number;
+    activeProducts: number;
+    syncedProducts: number;
+    externalProducts: number;
+    syncErrors: number;
+  };
+  syncRuns?: Array<{
+    id: string;
+    resource_type: string;
+    external_source: string;
+    external_id: string | null;
+    status: string;
+    created_at: string;
+    error_message: string | null;
+  }>;
 }) {
   const [showAdd, setShowAdd] = useState(false);
   const [filter, setFilter] = useState<"all" | "draft" | "active" | "archived">(
@@ -57,19 +81,43 @@ export default function TeamProductsPage({
 
   return (
     <div className="shell-content">
+      <CatalogApiNotice />
       <SectionHeader
         title="Products"
-        subtitle="Manage your experience catalog, variants and inclusions."
+        subtitle="Read-only catalog synced from the integration API."
         action={
-          <button
-            onClick={() => setShowAdd(true)}
-            className="btn-primary flex items-center gap-2"
-          >
-            <Icon name="plus" className="w-4 h-4" />
-            Add Product
-          </button>
+          canManage ? (
+            <button
+              onClick={() => setShowAdd(true)}
+              className="btn-primary flex items-center gap-2"
+            >
+              <Icon name="plus" className="w-4 h-4" />
+              Add Product
+            </button>
+          ) : undefined
         }
       />
+
+      {usage && (
+        <div className="mb-6 grid gap-3 sm:grid-cols-4">
+          {[
+            ["Total", usage.totalProducts],
+            ["Active", usage.activeProducts],
+            ["Synced", usage.syncedProducts],
+            ["External feeds", usage.externalProducts],
+          ].map(([label, value]) => (
+            <div
+              key={label}
+              className="rounded-2xl border border-zinc-800 bg-[#1a1a18] px-4 py-3"
+            >
+              <p className="text-[10px] uppercase tracking-[.14em] text-zinc-500">
+                {label}
+              </p>
+              <p className="mt-1 text-xl font-semibold text-white">{value}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Status filter tabs */}
       <div className="flex gap-1 mb-6 bg-[#1a1a18] rounded-lg p-1 w-fit">
@@ -119,14 +167,14 @@ export default function TeamProductsPage({
                 >
                   <td className="px-4 py-3">
                     <Link
-                      href={`/admin/products/${product.id}`}
-                      className="font-medium text-white hover:text-[var(--color-sunset)] transition-colors"
+                      href={`${basePath}/${product.id}`}
+                      className="font-medium text-white hover:text-sunset transition-colors"
                     >
                       {product.name}
                     </Link>
-                    {product.short_description && (
-                      <p className="text-xs text-zinc-500 mt-0.5 truncate max-w-xs">
-                        {product.short_description}
+                    {product.external_source && product.external_source !== "manual" && (
+                      <p className="mt-1 text-[10px] uppercase tracking-[.12em] text-zinc-500">
+                        {product.external_source} · {product.sync_status ?? "manual"}
                       </p>
                     )}
                   </td>
@@ -151,7 +199,7 @@ export default function TeamProductsPage({
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      {product.status === "draft" && (
+                      {canManage && product.status === "draft" && (
                         <form
                           action={setProductStatus.bind(
                             null,
@@ -164,7 +212,7 @@ export default function TeamProductsPage({
                           </button>
                         </form>
                       )}
-                      {product.status === "active" && (
+                      {canManage && product.status === "active" && (
                         <form
                           action={setProductStatus.bind(
                             null,
@@ -178,7 +226,7 @@ export default function TeamProductsPage({
                         </form>
                       )}
                       <Link
-                        href={`/admin/products/${product.id}`}
+                        href={`${basePath}/${product.id}`}
                         className="text-xs text-zinc-400 hover:text-white"
                       >
                         Edit
@@ -192,8 +240,12 @@ export default function TeamProductsPage({
         </div>
       )}
 
+      <div className="mt-8">
+        <CatalogSyncFeed runs={syncRuns} />
+      </div>
+
       {/* Add product slide-over */}
-      {showAdd && (
+      {canManage && showAdd && (
         <div
           className="fixed inset-0 bg-black/60 z-50 flex justify-end"
           onClick={() => setShowAdd(false)}
@@ -218,7 +270,7 @@ export default function TeamProductsPage({
                   Product created!
                 </p>
                 <Link
-                  href={`/admin/products/${formState.productId}`}
+                  href={`${basePath}/${formState.productId}`}
                   className="btn-primary"
                   onClick={() => setShowAdd(false)}
                 >

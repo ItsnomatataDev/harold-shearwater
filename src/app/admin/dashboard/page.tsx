@@ -44,7 +44,7 @@ export default async function AdminDashboardPage() {
         <MetricCard label="Present Today" value={data.metrics.presentToday} />
         <MetricCard label="Absent Today" value={data.metrics.absentToday} />
         <MetricCard
-          label="Pending Invitations"
+          label="Pending Team Invitations"
           value={data.metrics.pendingInvitations}
         />
         <MetricCard

@@ -1,17 +1,42 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Icon } from "@/components/Icon";
+import { PasswordInput } from "@/components/PasswordInput";
 
 type Mode = "login" | "register" | "forgot";
-type AccessType = "team" | "agent" | "customer";
+type SignupRole = "customer" | "agent";
+
+const SIGNUP_ROLES: Array<{
+  key: SignupRole;
+  label: string;
+  description: string;
+  accent: string;
+}> = [
+  {
+    key: "customer",
+    label: "Guest / Customer",
+    description: "Bookings, trip prep, documents and Harold support.",
+    accent: "bg-savannah",
+  },
+  {
+    key: "agent",
+    label: "Travel Agent",
+    description: "Products, enquiries and rates after Shearwater approval.",
+    accent: "bg-gold",
+  },
+];
 
 export function AuthForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const nextPath = searchParams?.get("next") ?? "";
+
   const [mode, setMode] = useState<Mode>("login");
+  const [signupRole, setSignupRole] = useState<SignupRole>("customer");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +47,7 @@ export function AuthForm() {
     setError(null);
     setMessage(null);
     const form = new FormData(event.currentTarget);
-    const email = String(form.get("email") ?? "").trim();
+    const email = String(form.get("email") ?? "").trim().toLowerCase();
     const password = String(form.get("password") ?? "");
     const supabase = createClient();
 
@@ -42,18 +67,13 @@ export function AuthForm() {
       if (mode === "register") {
         const firstName = String(form.get("firstName") ?? "").trim();
         const lastName = String(form.get("lastName") ?? "").trim();
-        const portalAccessRaw = String(form.get("portalAccess") ?? "customer")
-          .trim()
-          .toLowerCase();
-        const portalAccess: AccessType =
-          portalAccessRaw === "team" || portalAccessRaw === "agent"
-            ? portalAccessRaw
-            : "customer";
+        const portalAccess = signupRole;
+
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback?next=/auth/continue`,
+            emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath || "/auth/continue")}`,
             data: {
               first_name: firstName,
               last_name: lastName,
@@ -63,7 +83,9 @@ export function AuthForm() {
         });
         if (signUpError) throw signUpError;
         setMessage(
-          "Account created. Check your email to confirm your address, then sign in.",
+          signupRole === "agent"
+            ? "Account created. Confirm your email, then sign in to request Agent Access."
+            : "Account created. Confirm your email, then sign in to activate Customer Access.",
         );
         return;
       }
@@ -73,16 +95,19 @@ export function AuthForm() {
         password,
       });
       if (signInError) throw signInError;
-      const requestedPath = searchParams?.get("next");
       router.replace(
-        requestedPath?.startsWith("/") ? requestedPath : "/auth/continue",
+        nextPath.startsWith("/") ? nextPath : "/auth/continue",
       );
       router.refresh();
     } catch (cause) {
-      setError(
+      const message =
         cause instanceof Error
           ? cause.message
-          : "Authentication failed. Please try again.",
+          : "Authentication failed. Please try again.";
+      setError(
+        message.toLowerCase().includes("invalid login credentials")
+          ? "Email or password is incorrect. Use Forgot password to reset, or confirm you are signing in (not creating a new account)."
+          : message,
       );
     } finally {
       setLoading(false);
@@ -92,11 +117,15 @@ export function AuthForm() {
   return (
     <div className="w-full max-w-md">
       <div className="mb-8 flex items-center gap-3">
-        <div className="grid h-11 w-11 grid-cols-2 overflow-hidden rounded-xl border border-white/10 bg-[#1b1b19] p-1.5">
-          <span className="rounded-tl bg-sunset" />
-          <span className="rounded-tr-full bg-gold" />
-          <span className="rounded-bl-full bg-victoria" />
-          <span className="rounded-br bg-savannah" />
+        <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-[#1b1b19]">
+          <Image
+            src="/swicon.png"
+            alt="Shearwater Victoria Falls"
+            width={48}
+            height={48}
+            priority
+            className="h-full w-full object-contain"
+          />
         </div>
         <div>
           <p className="text-sm font-bold tracking-[.17em] text-white">
@@ -119,9 +148,9 @@ export function AuthForm() {
       </h1>
       <p className="mt-2 text-sm leading-6 text-[#8d8d87]">
         {mode === "login"
-          ? "One secure login for Team, Agent and Customer Access."
+          ? "One email and password for every portal. After sign-in we send you to the right workspace."
           : mode === "register"
-            ? "Choose which portal account to create for testing while you build."
+            ? "Choose whether you are a guest or a travel agent. Team Access is invite-only."
             : "We will send a secure reset link to your email."}
       </p>
       <form onSubmit={handleSubmit} className="mt-8 space-y-4">
@@ -139,41 +168,65 @@ export function AuthForm() {
             />
           </div>
         )}
+
         {mode === "register" && (
-          <label className="block">
-            <span className="mb-2 block text-[11px] font-semibold text-[#b7b7b0]">
-              Portal access
-            </span>
-            <select
-              name="portalAccess"
-              defaultValue="customer"
-              className="w-full rounded-xl border border-[#3a3a36] bg-[#232321] px-4 py-3 text-sm text-white focus:border-victoria focus:outline-none"
-            >
-              <option value="customer">Customer</option>
-              <option value="agent">Agent</option>
-              <option value="team">Team</option>
-            </select>
-            <span className="mt-2 block text-[10px] text-[#6f6f69]">
-              For production, Team and Agent users should be invited by admins.
-              This option is for build-stage testing.
-            </span>
-          </label>
+          <fieldset className="space-y-2">
+            <legend className="mb-2 block text-[11px] font-semibold text-[#b7b7b0]">
+              I am signing up as
+            </legend>
+            <div className="grid gap-2">
+              {SIGNUP_ROLES.map((role) => {
+                const selected = signupRole === role.key;
+                return (
+                  <button
+                    key={role.key}
+                    type="button"
+                    onClick={() => setSignupRole(role.key)}
+                    className={`rounded-xl border p-4 text-left transition ${
+                      selected
+                        ? "border-victoria bg-victoria/5"
+                        : "border-[#3a3a36] bg-[#232321] hover:border-[#4a4a46]"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <span
+                        className={`mt-0.5 block h-1.5 w-8 shrink-0 rounded-full ${role.accent}`}
+                      />
+                      <div>
+                        <p className="text-sm font-semibold text-white">
+                          {role.label}
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-[#8d8d87]">
+                          {role.description}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[10px] leading-5 text-[#666660]">
+              Team Access only: use the invitation link from your email. Guests
+              and travel agents should sign up on the login page instead.
+            </p>
+          </fieldset>
         )}
+
         <Field
           name="email"
           label="Email address"
           type="email"
-          autoComplete="email"
+          autoComplete="username"
         />
         {mode !== "forgot" && (
-          <Field
+          <PasswordInput
             name="password"
             label="Password"
-            type="password"
             autoComplete={
               mode === "login" ? "current-password" : "new-password"
             }
             minLength={8}
+            required
           />
         )}
         {error && (
@@ -217,7 +270,7 @@ export function AuthForm() {
         >
           {mode === "register"
             ? "Already have an account?"
-            : "Create customer account"}
+            : "Create an account"}
         </button>
         {mode !== "forgot" ? (
           <button

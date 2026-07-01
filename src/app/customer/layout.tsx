@@ -1,10 +1,23 @@
 import type { ReactNode } from "react";
-import { redirect } from "next/navigation";
-import { requireAccessContext } from "@/features/auth/services/auth-context";
 import { CustomerShell } from "@/layouts/CustomerShell";
+import { redirectIfMissingPortal, getAvailablePortals } from "@/features/auth/services/auth-routing";
 
-export default async function CustomerLayout({ children }: { children: ReactNode }) {
-  const customer = await requireAccessContext("customer");
-  if (!customer) redirect("/auth/continue");
-  return <CustomerShell name={customer.context.fullName}>{children}</CustomerShell>;
+export default async function CustomerLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const { context: customer } = await redirectIfMissingPortal("customer");
+  const showWorkspaceSwitch = (await getAvailablePortals(customer)).length > 1;
+
+  return (
+    <CustomerShell
+      showWorkspaceSwitch={showWorkspaceSwitch}
+      name={customer.fullName}
+      initials={customer.initials}
+      email={customer.email}
+    >
+      {children}
+    </CustomerShell>
+  );
 }

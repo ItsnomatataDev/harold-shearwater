@@ -4,6 +4,22 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthContext } from "@/features/auth/services/auth-context";
+import { getNotificationSummary } from "./notification-service";
+
+export async function loadNotificationSummary(organizationId: string) {
+  const parsedOrganizationId = z.string().uuid().parse(organizationId);
+  const context = await getAuthContext();
+  const membership = context?.memberships.find(
+    (item) =>
+      item.organizationId === parsedOrganizationId &&
+      (item.accessType === "team" || item.accessType === "agent"),
+  );
+  if (!context || !membership) {
+    throw new Error("Notification access is required.");
+  }
+
+  return getNotificationSummary(parsedOrganizationId, context.userId);
+}
 
 const preferenceSchema = z.object({
   inAppEnabled: z.boolean(),

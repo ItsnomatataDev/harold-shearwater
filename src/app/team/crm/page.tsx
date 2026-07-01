@@ -4,6 +4,7 @@ import { requireTeamContext } from "@/features/auth/services/auth-context";
 import { getCrmContacts } from "@/features/crm/contacts-service";
 import { ContactsPage } from "@/features/crm/components/ContactsPage";
 import { ModuleHeader } from "@/features/team/components/ModuleHeader";
+import { HaroldModuleContext } from "@/features/harold/HaroldModuleContext";
 
 export const metadata: Metadata = { title: "CRM — Contacts" };
 
@@ -16,6 +17,10 @@ export default async function CrmPage() {
 
   return (
     <section className="space-y-6">
+      <HaroldModuleContext
+        moduleId="crm"
+        summary={`Viewing ${contacts.length} CRM contacts`}
+      />
       <ModuleHeader
         eyebrow="CRM"
         title="Contacts"

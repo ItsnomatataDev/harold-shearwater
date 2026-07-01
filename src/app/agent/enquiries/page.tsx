@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { requireAgentContext } from "@/features/auth/services/auth-context";
 import { getAgentEnquiries } from "@/features/agent/enquiries/enquiries-service";
 import { AgentEnquiriesPage } from "@/features/agent/enquiries/AgentEnquiriesPage";
+import { HaroldModuleContext } from "@/features/harold/HaroldModuleContext";
 
 export const metadata: Metadata = { title: "Enquiries — Agent" };
 
@@ -15,6 +16,10 @@ export default async function AgentEnquiriesRoute() {
 
   return (
     <div className="space-y-6">
+      <HaroldModuleContext
+        moduleId="enquiries"
+        summary={`Viewing ${enquiries.length} agent enquiries`}
+      />
       <header>
         <p className="text-[11px] font-semibold uppercase tracking-[.16em] text-gold">
           Agent Portal

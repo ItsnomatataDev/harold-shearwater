@@ -7,12 +7,17 @@ import {
 import { isHaroldWebhookConfigured } from "@/features/team/harold/harold-webhook";
 import { AgentHaroldChat } from "@/features/agent/harold/AgentHaroldChat";
 
-export const metadata: Metadata = { title: "Harold — Agent" };
+export const metadata: Metadata = { title: "Harold AI — Agent" };
 
-export default async function AgentHaroldPage() {
+export default async function AgentHaroldPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ conversation?: string }>;
+}) {
   const agent = await requireAgentContext();
   if (!agent?.membership.organizationId) redirect("/auth/continue");
 
+  const { conversation: initialConversationId } = await searchParams;
   const orgId = agent.membership.organizationId;
   const { conversations } = await getHaroldConversations(orgId);
 
@@ -23,7 +28,7 @@ export default async function AgentHaroldPage() {
           Agent Portal
         </p>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white">
-          Harold
+          Harold AI
         </h1>
         <p className="mt-1 text-sm text-[#666]">
           Ask about products, availability, rates and policies.
@@ -32,6 +37,7 @@ export default async function AgentHaroldPage() {
       <AgentHaroldChat
         organizationId={orgId}
         initialConversations={conversations}
+        initialSelectedId={initialConversationId ?? null}
         webhookConfigured={isHaroldWebhookConfigured()}
       />
     </div>

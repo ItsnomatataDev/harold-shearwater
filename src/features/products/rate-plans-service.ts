@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getOperatingOrganizationId } from "@/features/products/products-service";
 
 export type RatePlan = {
   id: string;
@@ -137,23 +138,41 @@ export async function getRatePlanWithItems(
 }
 
 export async function getAgentRatePlans(
-  organizationId: string,
   membershipId: string,
 ): Promise<RatePlanWithItems[]> {
+  const organizationId = await getOperatingOrganizationId();
+  if (!organizationId) return [];
+
   const supabase = await createClient();
-  const { data: assignments, error: aErr } = await supabase
-    .from("agency_rate_assignments")
-    .select("rate_plan_id")
-    .eq("organization_id", organizationId)
-    .eq("membership_id", membershipId);
+  const [assignmentsResult, defaultPlansResult] = await Promise.all([
+    supabase
+      .from("agency_rate_assignments")
+      .select("rate_plan_id")
+      .eq("organization_id", organizationId)
+      .eq("membership_id", membershipId),
+    supabase
+      .from("rate_plans")
+      .select("id")
+      .eq("organization_id", organizationId)
+      .eq("plan_type", "agent_default")
+      .eq("active", true),
+  ]);
 
-  if (aErr || !assignments?.length) return [];
+  if (assignmentsResult.error) throw assignmentsResult.error;
+  if (defaultPlansResult.error) throw defaultPlansResult.error;
 
-  const planIds = assignments.map((a) => a.rate_plan_id);
+  const planIds = Array.from(
+    new Set([
+      ...(assignmentsResult.data ?? []).map((assignment) => assignment.rate_plan_id),
+      ...(defaultPlansResult.data ?? []).map((plan) => plan.id),
+    ]),
+  );
+  if (!planIds.length) return [];
+
   const plans = await Promise.all(
     planIds.map((id) => getRatePlanWithItems(organizationId, id)),
   );
-  return plans.filter((p): p is RatePlanWithItems => p !== null);
+  return plans.filter((plan): plan is RatePlanWithItems => plan !== null);
 }
 
 export async function getMembershipRatePlanAssignments(

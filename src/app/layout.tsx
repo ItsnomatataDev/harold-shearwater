@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
+import { Suspense } from 'react'
 import { ThemeInitializer } from '@/components/theme/ThemeInitializer'
+import { InviteHashHandler } from '@/features/auth/components/InviteHashHandler'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -14,6 +16,9 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
     <html lang="en" data-theme="dark" suppressHydrationWarning>
       <body>
         <ThemeInitializer />
+        <Suspense>
+          <InviteHashHandler />
+        </Suspense>
         {children}
       </body>
     </html>

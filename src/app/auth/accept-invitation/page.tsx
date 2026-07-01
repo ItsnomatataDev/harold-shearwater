@@ -1,10 +1,43 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { AcceptInvitationPanel } from "@/features/auth/components/AcceptInvitationPanel";
+import { TeamInvitationAcceptPanel } from "@/features/auth/components/TeamInvitationAcceptPanel";
+import {
+  getTeamInvitationByToken,
+  getPendingInvitationForCurrentUser,
+} from "@/features/auth/services/invitation-service";
 
-export default async function AcceptInvitationPage({ searchParams }: { searchParams: Promise<{ token?: string }> }) {
-  const { token } = await searchParams; if (!token) redirect("/auth?error=invitation");
-  const { data: { user } } = await (await createClient()).auth.getUser();
-  if (!user) redirect(`/auth?next=${encodeURIComponent(`/auth/accept-invitation?token=${token}`)}`);
-  return <main className="grid min-h-screen place-items-center bg-[#111] px-5"><AcceptInvitationPanel token={token} email={user.email ?? "your account"}/></main>;
+export default async function AcceptInvitationPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ token?: string }>;
+}) {
+  const { token } = await searchParams;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Token link (shared/copied) takes priority when present.
+  let invitation = token ? await getTeamInvitationByToken(token) : null;
+
+  // Otherwise, resolve a pending invitation from the signed-in user's metadata
+  // (this is how Supabase invite emails arrive — session first, no raw token).
+  if (!invitation) {
+    invitation = await getPendingInvitationForCurrentUser();
+  }
+
+  if (!invitation) {
+    redirect("/auth?error=invitation-expired");
+  }
+
+  return (
+    <main className="grid min-h-screen place-items-center bg-[#111] px-5 py-12">
+      <TeamInvitationAcceptPanel
+        token={token ?? null}
+        invitation={invitation}
+        signedInEmail={user?.email ?? null}
+      />
+    </main>
+  );
 }

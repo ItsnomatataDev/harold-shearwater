@@ -38,6 +38,12 @@ const STATUS_META: {
     bg: "bg-gold/10",
   },
   {
+    value: "on_hold",
+    label: "On hold",
+    color: "text-gold",
+    bg: "bg-gold/10",
+  },
+  {
     value: "confirmed",
     label: "Confirmed",
     color: "text-savannah",

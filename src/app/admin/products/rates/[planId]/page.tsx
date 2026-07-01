@@ -1,5 +1,5 @@
-import { requireTeamAdminContext } from "@/features/auth/services/auth-context";
 import { redirect } from "next/navigation";
+import { requireRatesView } from "@/features/products/access";
 import {
   getAgentRateAccounts,
   getRatePlanWithItems,
@@ -12,14 +12,15 @@ export default async function Page({
 }: {
   params: Promise<{ planId: string }>;
 }) {
-  const admin = await requireTeamAdminContext();
-  if (!admin?.membership.organizationId) redirect("/team/dashboard");
+  const team = await requireRatesView();
+  if (!team) redirect("/access-pending");
 
   const { planId } = await params;
+  const organizationId = team.membership.organizationId!;
   const [plan, products, rateAccounts] = await Promise.all([
-    getRatePlanWithItems(admin.membership.organizationId, planId),
-    getProducts(admin.membership.organizationId, "active"),
-    getAgentRateAccounts(admin.membership.organizationId, planId),
+    getRatePlanWithItems(organizationId, planId),
+    getProducts(organizationId, "active"),
+    getAgentRateAccounts(organizationId, planId),
   ]);
 
   if (!plan) redirect("/admin/products/rates");
@@ -30,6 +31,7 @@ export default async function Page({
       products={products}
       agents={rateAccounts.agents}
       assignments={rateAccounts.assignments}
+      basePath="/admin/products/rates"
     />
   );
 }

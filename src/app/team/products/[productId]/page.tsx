@@ -1,12 +1,23 @@
-import { requireTeamAdminContext } from "@/features/auth/services/auth-context";
 import { redirect } from "next/navigation";
+import { requireProductsView } from "@/features/products/access";
+import { getProductWithDetails } from "@/features/products/products-service";
+import TeamProductDetailPage from "@/features/products/components/TeamProductDetailPage";
 
 export default async function Page({
   params,
 }: {
   params: Promise<{ productId: string }>;
 }) {
-  await params;
-  const admin = await requireTeamAdminContext();
-  redirect(admin ? "/admin/products" : "/team/dashboard");
+  const team = await requireProductsView();
+  if (!team) redirect("/team/dashboard");
+
+  const { productId } = await params;
+  const organizationId = team.membership.organizationId!;
+  const product = await getProductWithDetails(organizationId, productId);
+
+  if (!product) redirect("/team/products");
+
+  return (
+    <TeamProductDetailPage product={product} basePath="/team/products" />
+  );
 }

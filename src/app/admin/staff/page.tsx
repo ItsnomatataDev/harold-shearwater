@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import {
   hasOrganizationPermission,
+  hasPlatformAdminAccess,
   hasTeamAdminAccess,
   requireAdminPortalContext,
 } from "@/features/auth/services/auth-context";
@@ -19,14 +20,14 @@ export default async function AdminStaffPage() {
   const { members, roles, pendingInvitations, options } = await getCrewData(organizationId);
 
   const isTeamAdmin = await hasTeamAdminAccess(membershipId);
-  const [canManageMembersPermission, canManageRolesPermission] =
-    await Promise.all([
-      hasOrganizationPermission(organizationId, "members.manage"),
-      hasOrganizationPermission(organizationId, "roles.manage"),
-    ]);
+  const isPlatformAdmin = await hasPlatformAdminAccess();
+  const canManageMembersPermission = await hasOrganizationPermission(
+    organizationId,
+    "members.manage",
+  );
 
   const canManageMembers = isTeamAdmin || canManageMembersPermission;
-  const canManageRoles = isTeamAdmin || canManageRolesPermission;
+  const canManageRoles = isPlatformAdmin;
 
   return (
     <section className="space-y-6">
@@ -38,8 +39,9 @@ export default async function AdminStaffPage() {
           Staff Management
         </h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-[#9a9a94]">
-          Manage invitations, team membership lifecycle, and role assignments
-          across Team Access.
+          Invite internal staff to Team Access, manage memberships, and assign
+          roles. Guests and travel agents use the public sign-up flow — not
+          invitations.
         </p>
       </header>
 

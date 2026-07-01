@@ -14,6 +14,7 @@ import type {
   HaroldMessage,
   HaroldMessageRole,
 } from "@/features/team/harold/harold-service";
+import { HaroldHandoverBanner } from "@/features/team/harold/components/HaroldHandoverBanner";
 
 type MessageRow = Database["public"]["Tables"]["harold_messages"]["Row"];
 type ConversationRow = Database["public"]["Tables"]["harold_conversations"]["Row"];
@@ -40,10 +41,12 @@ function realtimeMessage(row: MessageRow): HaroldMessage {
 export function AgentHaroldChat({
   organizationId,
   initialConversations,
+  initialSelectedId = null,
   webhookConfigured,
 }: {
   organizationId: string;
   initialConversations: HaroldConversation[];
+  initialSelectedId?: string | null;
   webhookConfigured: boolean;
 }) {
   const knownMessageIds = useRef(
@@ -55,7 +58,10 @@ export function AgentHaroldChat({
   );
   const [conversations, setConversations] = useState(initialConversations);
   const [selectedId, setSelectedId] = useState<string | null>(
-    initialConversations[0]?.id ?? null,
+    initialSelectedId &&
+      initialConversations.some((conversation) => conversation.id === initialSelectedId)
+      ? initialSelectedId
+      : initialConversations[0]?.id ?? null,
   );
   const [input, setInput] = useState("");
   const [pending, startTransition] = useTransition();
@@ -112,6 +118,7 @@ export function AgentHaroldChat({
                     status: row.status as HaroldConversationStatus,
                     handoverReason: row.handover_reason,
                     assignedToMembershipId: row.assigned_to_membership_id,
+                    chatConversationId: row.chat_conversation_id,
                     updatedAt: row.updated_at,
                   }
                 : conversation,
@@ -163,6 +170,7 @@ export function AgentHaroldChat({
               status: result.status,
               handoverReason: null,
               assignedToMembershipId: null,
+              chatConversationId: null,
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
               messages: result.messages,
@@ -271,6 +279,14 @@ export function AgentHaroldChat({
             </div>
           ) : null}
         </div>
+
+        {selected ? (
+          <HaroldHandoverBanner
+            status={selected.status}
+            sourceAccess="agent"
+            handoverReason={selected.handoverReason}
+          />
+        ) : null}
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">

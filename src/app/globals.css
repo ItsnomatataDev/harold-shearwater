@@ -3,11 +3,12 @@
 @theme {
   --color-charcoal: #111111;
   --color-ivory: #f8f8f5;
-  --color-sunset: #e95a41;
-  --color-gold: #e7b347;
-  --color-victoria: #1698c8;
-  --color-savannah: #58b88d;
-  --color-earth: #b87445;
+  /* Brand palette sourced from the Shearwater logo. Black stays primary. */
+  --color-sunset: #e74f3a;
+  --color-gold: #ecaf44;
+  --color-victoria: #0092be;
+  --color-savannah: #4ba774;
+  --color-earth: #c27241;
   --font-sans: "Inter", "Avenir Next", "Segoe UI", sans-serif;
 }
 
@@ -44,13 +45,13 @@ html { background: var(--canvas); }
 body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--canvas); color: var(--text-primary); }
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
-button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid #1698c8; outline-offset: 2px; }
-::selection { background: rgba(22,152,200,.35); }
-.app-bg { background: radial-gradient(circle at 82% 0%, rgba(22,152,200,.08), transparent 28rem), radial-gradient(circle at 55% 100%, rgba(231,179,71,.05), transparent 34rem), var(--canvas); }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid #0092be; outline-offset: 2px; }
+::selection { background: rgba(0,146,190,.35); }
+.app-bg { background: radial-gradient(circle at 82% 0%, rgba(0,146,190,.09), transparent 28rem), radial-gradient(circle at 12% 8%, rgba(75,167,116,.06), transparent 26rem), radial-gradient(circle at 55% 100%, rgba(236,175,68,.05), transparent 34rem), var(--canvas); }
 .card { background: var(--surface-card); border: 1px solid var(--border); border-radius: 18px; }
 .soft-card { background: var(--surface-soft); border: 1px solid var(--border); border-radius: 14px; }
 .input { width: 100%; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-soft); padding: .7rem .85rem; color: var(--text-primary); font-size: .8125rem; outline: none; }
-.input:focus { border-color: #1698c8; }
+.input:focus { border-color: #0092be; }
 @keyframes slide-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 .animate-in { animation: slide-up .45s ease both; }
 
@@ -63,7 +64,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   color: var(--text-primary);
   padding: .8rem .9rem;
 }
-.Toastify__progress-bar { background: linear-gradient(90deg, #e95a41, #e7b347); }
+.Toastify__progress-bar { background: linear-gradient(90deg, #e74f3a, #ecaf44 55%, #0092be); }
 .Toastify__close-button { color: #8e8e88; opacity: .8; }
 
 /*

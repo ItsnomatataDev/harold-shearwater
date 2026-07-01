@@ -13,6 +13,13 @@ import type {
   HaroldConversationStatus,
   HaroldMessage,
 } from "@/features/team/harold/harold-service";
+import { inferHandoverDomain } from "@/features/team/harold/handover-routing";
+import {
+  applyHaroldHandover,
+  HANDOVER_SYSTEM_MESSAGE,
+  replyImpliesHandover,
+} from "@/features/team/harold/harold-handover";
+import { augmentHaroldModuleWithAvailability } from "@/features/harold/harold-availability-context";
 
 const messageSchema = z.object({
   conversationId: z.string().uuid().optional(),
@@ -117,6 +124,15 @@ export async function sendAgentHaroldMessage(
   if (historyResult.error) throw new Error(historyResult.error.message);
 
   try {
+    const moduleContext = await augmentHaroldModuleWithAvailability(
+      {
+        id: "agent_harold",
+        label: "Agent Harold Chat",
+        summary: "Agent is chatting with Harold about clients, products and availability.",
+      },
+      parsed.message,
+    );
+
     const webhookResult = await sendToHaroldWebhook({
       conversationId,
       organizationId,
@@ -126,6 +142,7 @@ export async function sendAgentHaroldMessage(
         name: agent.context.fullName,
         access: "agent",
       },
+      module: moduleContext,
       message: {
         id: userMessage.id,
         content: userMessage.content,
@@ -162,49 +179,35 @@ export async function sendAgentHaroldMessage(
       });
     }
 
-    if (webhookResult.handover) {
+    const shouldHandover =
+      webhookResult.handover || replyImpliesHandover(webhookResult.reply);
+
+    if (shouldHandover) {
       const reason =
         webhookResult.handoverReason ?? "Harold requested human assistance.";
-      const { error } = await admin
-        .from("harold_conversations")
-        .update({
-          status: "handover_requested",
-          handover_requested_at: new Date().toISOString(),
-          handover_requested_by: "ai",
-          handover_reason: reason,
-          assigned_to_membership_id: null,
-          resolved_at: null,
-        })
-        .eq("id", conversationId)
-        .eq("organization_id", organizationId);
-      if (error) throw new Error(error.message);
+      const systemRow = await applyHaroldHandover(admin, {
+        conversationId,
+        organizationId,
+        sourceAccess: "agent",
+        reason,
+        userMessage: parsed.message,
+        webhookDomain: webhookResult.handoverDomain,
+        includeSystemMessage: !webhookResult.reply,
+      });
       status = "handover_requested";
-
-      if (!webhookResult.reply) {
-        const { data, error: systemError } = await admin
-          .from("harold_messages")
-          .insert({
-            conversation_id: conversationId,
-            role: "system",
-            content:
-              "I've passed this conversation to the Shearwater team. Someone will be with you shortly and will have the full conversation context.",
-            metadata: { reason },
-          })
-          .select("id,created_at")
-          .single();
-        if (systemError) throw new Error(systemError.message);
+      if (systemRow) {
         responseMessages.push({
-          id: data.id,
+          id: systemRow.id,
           conversationId,
           role: "system",
-          content: "Human assistance requested from the Shearwater team.",
+          content: HANDOVER_SYSTEM_MESSAGE,
           authorName: "System",
-          createdAt: data.created_at,
+          createdAt: systemRow.created_at,
         });
       }
     }
 
-    if (!webhookResult.reply && !webhookResult.handover) {
+    if (!webhookResult.reply && !shouldHandover) {
       return {
         conversationId,
         messages: [userMessage],
@@ -240,10 +243,15 @@ export async function requestAgentHumanHandover(
   const parsed = handoverSchema.parse(input);
   await guardAgentOrg(organizationId);
   const supabase = await createClient();
-  const { error } = await supabase.rpc("request_harold_handover", {
+  const handoverDomain = inferHandoverDomain({
+    sourceAccess: "agent",
+    reason: parsed.reason ?? "The agent requested help from the Shearwater team.",
+  });
+  const { error } = await (supabase as any).rpc("request_harold_handover", {
     target_conversation_id: parsed.conversationId,
     requested_reason:
       parsed.reason || "The agent requested help from the Shearwater team.",
+    requested_domain: handoverDomain,
   });
   if (error) throw new Error(error.message);
 

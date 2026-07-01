@@ -27,10 +27,24 @@ const QUICK_ACTIONS = [
     accent: "bg-gold/10 text-gold",
   },
   {
-    label: "Search Availability",
-    description: "Check dates & products",
+    label: "Product Catalog",
+    description: "Browse experiences & fact sheets",
+    href: "/agent/products",
+    icon: "package" as const,
+    accent: "bg-savannah/10 text-savannah",
+  },
+  {
+    label: "Your Rates",
+    description: "Agency contracted pricing",
+    href: "/agent/rates",
+    icon: "dollar" as const,
+    accent: "bg-gold/10 text-gold",
+  },
+  {
+    label: "Availability",
+    description: "Check room dates",
     href: "/agent/search",
-    icon: "search" as const,
+    icon: "calendar" as const,
     accent: "bg-victoria/10 text-victoria",
   },
   {
@@ -123,10 +137,10 @@ export default async function AgentDashboardPage() {
         ))}
       </div>
 
-      {/* Two-column layout */}
+
       <div className="grid gap-6 lg:grid-cols-3">
 
-        {/* Recent enquiries — 2/3 width */}
+
         <div className="lg:col-span-2 rounded-2xl border border-[#2e2e2b] bg-[#1a1a18]">
           <div className="flex items-center justify-between border-b border-[#2e2e2b] px-5 py-4">
             <div>
@@ -158,7 +172,6 @@ export default async function AgentDashboardPage() {
             <ul className="divide-y divide-[#232320]">
               {recent.map((e) => (
                 <li key={e.id} className="flex items-center gap-4 px-5 py-3.5">
-                  {/* Avatar placeholder */}
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#2a2a27] text-[10px] font-bold text-[#777]">
                     {e.contactName.charAt(0).toUpperCase()}
                   </div>
@@ -183,10 +196,8 @@ export default async function AgentDashboardPage() {
           )}
         </div>
 
-        {/* Right column — 1/3 */}
-        <div className="space-y-4">
 
-          {/* Harold spotlight */}
+        <div className="space-y-4">
           <div className="rounded-2xl border border-[#3a2a3a] bg-[#1e1520] p-5">
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#3a2a3a]">
@@ -209,7 +220,7 @@ export default async function AgentDashboardPage() {
             </Link>
           </div>
 
-          {/* Quick actions */}
+
           <div className="rounded-2xl border border-[#2e2e2b] bg-[#1a1a18]">
             <div className="border-b border-[#2e2e2b] px-4 py-3.5">
               <h3 className="text-xs font-semibold text-white">Quick Actions</h3>

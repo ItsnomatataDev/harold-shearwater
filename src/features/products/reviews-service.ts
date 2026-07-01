@@ -2,6 +2,7 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import { isMissingDatabaseObject } from "@/lib/supabase/schema-errors";
+import { getOperatingOrganizationId } from "@/features/products/products-service";
 
 export interface ProductReviewSummary {
   id: string;
@@ -36,4 +37,18 @@ export async function getPublishedProductReviews(
     body: review.body,
     visitDate: review.visit_date,
   }));
+}
+
+export async function getAgentProductReviews(): Promise<ProductReviewSummary[]> {
+  const organizationId = await getOperatingOrganizationId();
+  if (!organizationId) return [];
+  return getPublishedProductReviews(organizationId);
+}
+
+export async function getCustomerProductReviews(): Promise<
+  ProductReviewSummary[]
+> {
+  const organizationId = await getOperatingOrganizationId();
+  if (!organizationId) return [];
+  return getPublishedProductReviews(organizationId);
 }

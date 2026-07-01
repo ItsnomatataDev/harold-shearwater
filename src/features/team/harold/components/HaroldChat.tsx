@@ -141,6 +141,7 @@ export function HaroldChat({
                     status: row.status as HaroldConversationStatus,
                     handoverReason: row.handover_reason,
                     assignedToMembershipId: row.assigned_to_membership_id,
+                    chatConversationId: row.chat_conversation_id,
                     updatedAt: row.updated_at,
                   }
                 : conversation,
@@ -190,6 +191,7 @@ export function HaroldChat({
           status,
           handoverReason: null,
           assignedToMembershipId: null,
+          chatConversationId: null,
           createdAt,
           updatedAt: messages.at(-1)?.createdAt ?? createdAt,
           messages: unseen,
